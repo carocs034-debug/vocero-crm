@@ -6,6 +6,7 @@ Exportaciones saneadas de los pilotos de n8n comprobados el 6 de noviembre de 20
 - formulario-pdf-ia.json: carga manual de un PDF ficticio y analisis.
 - nodos/: codigo extraido del piloto integrado exportado; es la referencia de la configuracion de esa fecha.
 - verificar.mjs: pruebas con texto y bytes sinteticos, sin API ni documentos privados. Ejecutar `node automation/reclutamiento/verificar.mjs` desde la raiz.
+- whatsapp-crm-ingesta.json: copia nueva con 16 nodos explicados y tres guias; agrega preparacion y envio al CRM dev. Sin credenciales y SIN PUBLICAR. La ruta de escritura esta apagada por defecto y requiere habilitacion explicita y clave dedicada. No importar sobre un canvas con nodos: n8n agrega en vez de reemplazar.
 
 ## Restaurar en un entorno de prueba
 
@@ -23,3 +24,5 @@ Estas plantillas requieren configuracion; los ids ficticios no corresponden a ar
 La preparacion del texto retira el encabezado de un formato especifico, no anonimiza todos los CVs. Las citas se verifican literalmente pero la interpretacion, resumen y alertas necesitan revision humana. Desconocido es null, no incumplimiento. El score se calcula fuera del modelo y solo con cobertura suficiente; no decide contratacion.
 
 El piloto no tiene HMAC, cola/idempotencia persistentes, retencion documental ni analisis antimalware. Verifica formato y tamano despues de descargar; los PDFs escaneados requieren otra ruta con OCR. Antes de uso real deben completarse esos controles y probar manejo de errores y aislamiento.
+
+La variante CRM agrega idempotencia durable del resultado aceptado por cuenta/mensaje en Postgres y almacenamiento privado, no una cola durable de recepcion ni HMAC en Zernio. Una repeticion conserva el primer resultado y no sobrescribe revision humana. Cambiar el PDF del mismo mensaje devuelve conflicto. Sigue limitada a CV ficticio, cuenta y conversacion fijadas en el servidor. Un mensaje nuevo con el mismo CV tiene otra identidad; no deduplica personas por nombre o telefono.

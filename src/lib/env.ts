@@ -10,6 +10,12 @@ import { z } from "zod";
 
 export const envSchema = z.object({
   RECLUTAMIENTO: z.string().optional(),
+  RECLUTAMIENTO_INGESTA: z.string().optional(),
+  RECLUTAMIENTO_INGESTA_KEY: z.string().optional(),
+  RECLUTAMIENTO_INGESTA_ORG: z.string().optional(),
+  RECLUTAMIENTO_INGESTA_CUENTA: z.string().optional(),
+  RECLUTAMIENTO_INGESTA_CONVERSACION: z.string().optional(),
+  RECLUTAMIENTO_INGESTA_VACANTE: z.string().optional(),
   APP_BASE_URL: z.string().url(),
   DATABASE_URL: z.string().min(1),
   BETTER_AUTH_SECRET: z.string().min(16),

@@ -58,3 +58,13 @@ Con RECLUTAMIENTO=on, el menu Pipeline muestra las mismas postulaciones por etap
 El recorrido UI feliz y de errores se verifico con el arnes sintetico scripts/e2e-pipeline-reclutamiento.mjs; detalle en tests/e2e/us-pipeline-reclutamiento.md. Incluyo escritorio y ancho 390 px, paginacion, arrastre, selector, busqueda y conflictos. No agrega integraciones ni cambia n8n.
 
 Desplegado en dev-crm.talentedmx.com/pipeline con commit bcf0ce3: salud y HTTPS comprobados, app/base healthy y puerta temporal conservada. Imagen anterior conservada como talented-crm:antes-pipeline. El recorrido autenticado del VPS sigue pendiente del acceso del navegador; el recorrido funcional de las componentes se completo en el arnes local.
+
+## Conexion opcional de n8n a Postulaciones
+
+La especificacion 069 define una unica ruta de escritura multipart, apagada por defecto. Su clave es exclusiva para el conector y no permite consultar CVs, editar revisiones ni usar el bot. Organizacion, cuenta, conversacion y vacante se fijan en el servidor. El piloto usa una etiqueta sintetica de candidato y no infiere su nombre con IA.
+
+El borrador de n8n se creo como copia nueva; conserva los filtros, descarga, extraccion y validador del piloto. Agrega Preparar ingesta CRM y Guardar postulacion en CRM dev. Tiene explicaciones visibles de cada nodo y guias de las tres etapas; se verificaron al recargar. Sigue sin publicar y sin seleccionar credencial de escritura.
+
+Pasos para habilitar: ver tests/e2e/us-ingesta-reclutamiento.md. Primero pruebas y despliegue con ingesta apagada. Despues confirmacion de acceso nuevo, clave ingresada por el usuario y prueba manual/nuevo PDF. El override deploy/talented/ingesta.yml se agrega solo en ese ultimo paso; no cambia la puerta del resto del CRM.
+
+No usar CVs reales aun: quedan pendientes HMAC/cola del ingreso Zernio, retencion y antimalware/OCR. El endpoint valida forma del PDF y citas contra texto, no la interpretacion de la IA.

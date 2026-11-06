@@ -1,0 +1,10 @@
+# Opt-in: agregar SOLO al autorizar el acceso dedicado del piloto.
+# Ruta exacta con X-Reclutamiento-Key; el resto conserva BasicAuth y login.
+services:
+  app:
+    labels:
+      - traefik.http.routers.talented-ingesta.rule=Host(`dev-crm.talentedmx.com`) && Path(`/api/integraciones/reclutamiento/ingesta`)
+      - traefik.http.routers.talented-ingesta.priority=100
+      - traefik.http.routers.talented-ingesta.entrypoints=websecure
+      - traefik.http.routers.talented-ingesta.tls.certresolver=letsencrypt
+      - traefik.http.routers.talented-ingesta.service=talented-dev
