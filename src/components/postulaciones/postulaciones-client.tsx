@@ -19,7 +19,7 @@ async function solicitar<T>(url: string, init?: RequestInit): Promise<T> {
 function Aviso({ children }: { children: React.ReactNode }) { return <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{children}</p>; }
 function Estado({ etapa }: { etapa: EtapaPostulacion }) { return <span className="inline-flex rounded-full border bg-muted px-2.5 py-1 text-xs font-medium text-foreground">{ETIQUETAS_ETAPA[etapa]}</span>; }
 
-export function PostulacionesClient() {
+export function PostulacionesClient({ initialId }: { initialId?: string }) {
   const [lista, setLista] = useState<Lista | null>(null);
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(true);
@@ -31,6 +31,14 @@ export function PostulacionesClient() {
   const [nueva, setNueva] = useState(false);
   const [cambio, setCambio] = useState(0);
   const [sucia, setSucia] = useState(false);
+  useEffect(() => {
+    if (!initialId) return;
+    const controller = new AbortController();
+    solicitar<{ postulacion: PostulacionFicha }>(`/api/postulaciones/${initialId}`, { signal: controller.signal })
+      .then(result => { if (!controller.signal.aborted) { setSeleccion(result.postulacion); setNueva(false); setSucia(false); } })
+      .catch(e => { if (!controller.signal.aborted) setError(e.message); });
+    return () => controller.abort();
+  }, [initialId]);
   useEffect(() => { const t = setTimeout(() => { setQ(busqueda); setPagina(1); }, 250); return () => clearTimeout(t); }, [busqueda]);
   useEffect(() => {
     const controller = new AbortController();

@@ -44,3 +44,15 @@ La especificacion, plan, tareas y contrato estan en specs/067-postulaciones. El 
 La recepcion automatica desde n8n/Zernio todavia no esta conectada a esta pantalla. No se habilito una API publica ni se cambiaron los pilotos o workflows existentes. El conector autenticado e idempotente sera el siguiente paso.
 
 Validacion local: typecheck, lint, 1466 pruebas y build. El ensayo scripts/e2e-postulaciones.ts prueba servicios contra Postgres y almacenamiento reales exclusivamente en un host dev con POSTULACIONES_SELFTEST=1. Crea organizaciones sinteticas sin membresias y un usuario sin cuenta ni password; estas fixtures quedan aisladas para inspeccion. El recorrido visual y el resultado del despliegue se registran en specs/067-postulaciones/tasks.md.
+
+## Pipeline de seleccion
+
+Con RECLUTAMIENTO=on, el menu Pipeline muestra las mismas postulaciones por etapa; con la bandera apagada conserva el tablero comercial de Vocero. No se crean leads ni se copian candidatos.
+
+1. Abrir Pipeline. Cada columna muestra total y tarjetas visibles; usar Cargar mas cuando haya mas de 30.
+2. Buscar por nombre o vacante. Actualizar consulta los cambios recientes de otros usuarios.
+3. Arrastrar desde el asa o elegir la etapa en el selector de la tarjeta (tambien funciona en celular).
+4. Esperar la confirmacion. El movimiento conserva las notas y registra revision humana. Un conflicto no sobrescribe: Recargar tablero y revisar la ficha antes de reintentar.
+5. Pulsar el nombre abre directamente el CV, analisis y notas de esa misma postulacion.
+
+El recorrido UI feliz y de errores se verifico con el arnes sintetico scripts/e2e-pipeline-reclutamiento.mjs; detalle en tests/e2e/us-pipeline-reclutamiento.md. Incluyo escritorio y ancho 390 px, paginacion, arrastre, selector, busqueda y conflictos. No agrega integraciones ni cambia n8n.

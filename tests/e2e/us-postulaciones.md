@@ -12,3 +12,9 @@ Solo datos sinteticos y RECLUTAMIENTO=on. Sin cuentas de canal ni cerebro.
 8. Movil 390 px y escritorio: lista/ficha, volver, etiquetas de formulario, estados cargando/error. Una ficha sin analisis muestra ese estado y nunca inventa calificacion.
 
 Anotar el resultado real en specs/067-postulaciones/tasks.md; una prueba pendiente no cuenta como aprobada.
+
+## Ensayo de persistencia real
+
+El script scripts/e2e-postulaciones.ts usa los servicios y el almacenamiento reales. Se compila con esbuild en la etapa builder de la misma imagen, con alias @=./src, formato ESM, plataforma node y banner createRequire igual al migrador. Se copia el bundle al contenedor de desarrollo y se ejecuta con POSTULACIONES_SELFTEST=1, como usuario vocero. No ejecutar sobre produccion.
+
+El script exige APP_BASE_URL con host dev-* o localhost. Crea dos organizaciones sinteticas sin membresias, dos fichas y un usuario sin cuenta/password. No habilita login, canales ni permisos. Conserva las fixtures para inspeccion. Verifica busqueda, persistencia, deduplicacion, denegacion entre organizaciones, bytes del CV descargado, segundo adjunto rechazado, revision humana, version vieja rechazada y PDF invalido sin metadata. El ensayo no sustituye el recorrido UI de arriba.
