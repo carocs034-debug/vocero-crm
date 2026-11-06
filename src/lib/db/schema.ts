@@ -10,6 +10,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import type { AnalisisPostulacion } from "../postulaciones";
 
 /**
  * Tiempo: todas las columnas son `timestamp without time zone` y el marco es
@@ -113,6 +114,35 @@ export const invitation = pgTable("invitation", {
 /* ============================================================
  * Dominio (toda tabla lleva organization_id NOT NULL + índice org-first)
  * ============================================================ */
+
+export const postulacion = pgTable("postulacion", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+  nombre: text("nombre").notNull(),
+  vacante: text("vacante").notNull(),
+  correo: text("correo"),
+  telefono: text("telefono"),
+  canal: text("canal", { enum: ["manual", "whatsapp", "messenger", "instagram", "correo"] }).notNull().default("manual"),
+  etapa: text("etapa", { enum: ["nueva", "por_completar", "en_revision", "entrevista", "cerrada"] }).notNull().default("nueva"),
+  notas: text("notas").notNull().default(""),
+  analisis: jsonb("analisis").$type<AnalisisPostulacion>(),
+  claveExterna: text("clave_externa"),
+  cvStorageId: text("cv_storage_id"),
+  cvNombre: text("cv_nombre"),
+  cvBytes: integer("cv_bytes"),
+  revisionHumana: text("revision_humana", { enum: ["pendiente", "revisada"] }).notNull().default("pendiente"),
+  revisadaPor: text("revisada_por").references(() => user.id, { onDelete: "set null" }),
+  revisadaEn: timestamp("revisada_en"),
+  version: integer("version").notNull().default(1),
+  creadaEn: timestamp("creada_en").notNull().defaultNow(),
+  actualizadaEn: timestamp("actualizada_en").notNull().defaultNow(),
+}, t => [
+  index("postulacion_org_etapa_idx").on(t.organizationId, t.etapa, t.creadaEn),
+  uniqueIndex("postulacion_org_externa_uq").on(t.organizationId, t.claveExterna),
+  check("postulacion_etapa_chk", sql`${t.etapa} in ('nueva','por_completar','en_revision','entrevista','cerrada')`),
+  check("postulacion_canal_chk", sql`${t.canal} in ('manual','whatsapp','messenger','instagram','correo')`),
+  check("postulacion_revision_chk", sql`${t.revisionHumana} in ('pendiente','revisada')`),
+]);
 
 export const contact = pgTable(
   "contact",

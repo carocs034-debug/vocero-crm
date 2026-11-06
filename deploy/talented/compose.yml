@@ -23,6 +23,7 @@ services:
       ATRIBUCION: ""
       MEDIA_DIR: /data/media
       MEDIA_STORE: disco
+      RECLUTAMIENTO: ${RECLUTAMIENTO:-}
     ports:
       - "127.0.0.1:3100:3000"
     volumes:

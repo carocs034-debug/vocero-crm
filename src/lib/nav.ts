@@ -5,6 +5,7 @@ import {
   Inbox,
   Kanban,
   ListChecks,
+  ClipboardList,
   Settings,
   Sparkles,
   Users,
@@ -49,10 +50,12 @@ export const SETTINGS_ITEM: NavItem = {
  */
 export function appNavGroups({
   agenda = false,
+  reclutamiento = false,
   role,
 }: {
   /** 015 — "Citas" solo existe si esta instancia encendió la agenda. */
   agenda?: boolean;
+  reclutamiento?: boolean;
   /** #86 — La guía de inicio solo para quien puede configurar. */
   role?: string | null;
 }): NavGroup[] {
@@ -61,6 +64,7 @@ export function appNavGroups({
     { href: "/pipeline", label: "Pipeline", icon: Kanban },
     { href: "/contacts", label: "Contactos", icon: Users },
   ];
+  if (reclutamiento) trabajo.push({ href: "/postulaciones", label: "Postulaciones", icon: ClipboardList });
   // Citas va después de Contactos: es el paso siguiente de un trato, no una
   // sección aparte.
   if (agenda) trabajo.push({ href: "/bookings", label: "Citas", icon: CalendarDays });

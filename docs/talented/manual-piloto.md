@@ -28,8 +28,19 @@ La configuracion esta en deploy/talented. Las claves se gestionan fuera de Git y
 - Pruebas reproducibles con entradas sinteticas.
 - Este manual publico.
 
-No incluye CVs, historiales de mensajes, ejecuciones, contrasenas, tokens, sesiones ni base de datos. La restauracion requiere credenciales nuevas y datos configurados por el operador. Los cambios son preparacion del entorno y respaldo; todavia no implementan la pantalla de postulaciones.
+No incluye CVs, historiales de mensajes, ejecuciones, contrasenas, tokens, sesiones ni base de datos. La restauracion requiere credenciales nuevas y datos configurados por el operador.
 
-## Siguiente etapa
+## Postulaciones: primera version
 
-Especificar el modulo de postulaciones: candidato, vacante, adjunto privado, resumen, evidencias, informacion pendiente, etapa y revision humana. Cualquier cambio del modelo de datos o contrato seguira el ciclo de especificacion del repositorio antes de implementarse.
+La especificacion, plan, tareas y contrato estan en specs/067-postulaciones. El modulo requiere RECLUTAMIENTO=on; apagado, sus rutas responden 404 y su menu no aparece. La migracion 0027 es aditiva y fue generada con Drizzle.
+
+1. Entrar a Postulaciones y pulsar Nueva postulacion.
+2. Capturar nombre y vacante; contacto y canal son opcionales. Guardar la ficha antes de adjuntar el archivo.
+3. Adjuntar un PDF ficticio de hasta 10 MB. La descarga requiere la sesion de la misma organizacion. Esta version conserva un unico CV por ficha y no reemplaza adjuntos.
+4. Buscar por nombre o vacante, filtrar por etapa y abrir la ficha.
+5. Revisar el documento, elegir etapa y escribir notas. Guardar revision registra la intervencion humana. Una edicion concurrente devuelve conflicto en lugar de sobrescribir.
+6. Sin analisis, la ficha indica Sin analisis. No se invoca IA desde esta pantalla. Cuando existe un resultado estructurado se muestran resumen, cobertura, evidencias y pendientes; el score puede ser null.
+
+La recepcion automatica desde n8n/Zernio todavia no esta conectada a esta pantalla. No se habilito una API publica ni se cambiaron los pilotos o workflows existentes. El conector autenticado e idempotente sera el siguiente paso.
+
+Validacion local: typecheck, lint, 1466 pruebas y build. El ensayo scripts/e2e-postulaciones.ts prueba servicios contra Postgres y almacenamiento reales exclusivamente en un host dev con POSTULACIONES_SELFTEST=1. Crea organizaciones sinteticas sin membresias y un usuario sin cuenta ni password; estas fixtures quedan aisladas para inspeccion. El recorrido visual y el resultado del despliegue se registran en specs/067-postulaciones/tasks.md.

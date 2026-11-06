@@ -5,7 +5,7 @@ Exportaciones saneadas de los pilotos de n8n comprobados el 6 de noviembre de 20
 - whatsapp-pdf-ia.json: recepcion autenticada, filtro de una conversacion, descarga PDF, extraccion, IA y validacion. Tambien conserva la entrada manual alternativa.
 - formulario-pdf-ia.json: carga manual de un PDF ficticio y analisis.
 - nodos/: codigo extraido del piloto integrado exportado; es la referencia de la configuracion de esa fecha.
-- verificar.cjs: pruebas con texto y bytes sinteticos, sin API ni documentos privados. Ejecutar `node automation/reclutamiento/verificar.cjs` desde la raiz.
+- verificar.mjs: pruebas con texto y bytes sinteticos, sin API ni documentos privados. Ejecutar `node automation/reclutamiento/verificar.mjs` desde la raiz.
 
 ## Restaurar en un entorno de prueba
 

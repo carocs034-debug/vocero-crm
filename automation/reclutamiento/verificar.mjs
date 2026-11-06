@@ -1,7 +1,9 @@
 // Pruebas sin red ni CVs: entradas sinteticas para los nodos exportados.
-const fs = require('node:fs');
-const path = require('node:path');
-const assert = require('node:assert/strict');
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const read = name => fs.readFileSync(path.join(__dirname, 'nodos', name), 'utf8');
 const prep = new Function('$input', read('preparar-ia.js'));
 const validator = new Function('$input', '$', read('validar-ia.js'));
