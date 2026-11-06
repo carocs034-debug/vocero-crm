@@ -272,7 +272,7 @@
       "notesInFlow": true
     },
     {
-      "id": "4e5ed3d2-fc6d-4888-86bb-35a8efa81b99",
+      "id": "663fc109-b17b-430f-895c-3f869b44d74e",
       "name": "Preparar ingesta CRM",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -287,7 +287,7 @@
       "notesInFlow": true
     },
     {
-      "id": "834dd7ad-35f9-4ab7-a19a-841fae0b76c2",
+      "id": "5fb17614-173f-470a-8e05-0568b60fdb19",
       "name": "Guardar postulacion en CRM dev",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -298,7 +298,7 @@
       "parameters": {
         "method": "POST",
         "url": "https://dev-crm.talentedmx.com/api/integraciones/reclutamiento/ingesta",
-        "authentication": "genericCredentialType",
+        "authentication": "none",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "contentType": "multipart-form-data",
@@ -324,6 +324,7 @@
           }
         }
       },
+      "disabled": true,
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000,
@@ -331,7 +332,7 @@
       "notesInFlow": true
     },
     {
-      "id": "40d7dd23-4f87-4f2d-be21-9678495561cd",
+      "id": "18b8881a-b1fe-4ce3-9b09-38db3aaee713",
       "name": "Guia de ingesta CRM",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,

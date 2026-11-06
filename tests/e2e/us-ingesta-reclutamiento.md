@@ -10,7 +10,7 @@ El ensayo crea una organizacion sin membresias y un usuario sin cuenta/password.
 
 1. Confirmar habilitacion de una ruta HTTPS exacta con clave dedicada de escritura y alcance fijado en servidor. Mantener BasicAuth/login para el resto.
 2. Usuario ingresa la clave en una credencial Header Auth nueva de n8n: nombre de cabecera X-Reclutamiento-Key. No enviarla al chat ni incluirla en JSON de workflow.
-3. Elegir esa credencial en Guardar postulacion en CRM dev de la copia del piloto. Confirmar URL dev, dos campos multipart, timeout/reintentos y sin redirecciones.
+3. Guardar postulacion en CRM dev se deja desactivado y con Authentication=None mientras falta la clave. Cambiar a Generic Credential Type -> Header Auth y elegir expresamente la credencial CRM nueva (n8n puede sugerir otra existente: no aceptarla). Confirmar URL dev, dos campos multipart, timeout/reintentos y sin redirecciones. Activar el nodo solo despues de verificar la seleccion.
 4. Ejecutar la referencia manual: PDF -> texto -> IA -> validador -> preparar ingesta -> guardar. Debe responder 201. Reintentar guardado: 200 y mismo id.
 5. Abrir Postulaciones y Pipeline con la cuenta del usuario: una ficha Nueva, PDF descargable, resumen/citas/pendientes, revision pendiente. Cambiar etapa y nota; reintentar evento no las sobrescribe.
 6. Activar escucha TEST de la copia y cambiar temporalmente destino del webhook de prueba de Zernio. Usuario envia PDF ficticio nuevo desde el hilo autorizado. Verificar ejecucion y ficha, sin mensajes salientes.
@@ -19,3 +19,9 @@ El ensayo crea una organizacion sin membresias y un usuario sin cuenta/password.
 ## Documentacion en canvas
 
 16 nodos operativos tienen notes y notesInFlow=true. Tres notas generales describen recepcion, PDF/IA y guardado. Se verifico su persistencia recargando n8n. Los workflows anteriores se conservaron.
+
+## Resultado del 6 de noviembre de 2026
+
+Tipos/lint/build y 1476 pruebas aprobados. Ensayo real ejecutado en VPS: salida 0, una ficha ante dos solicitudes concurrentes, PDF identico, revisiones intactas, conflictos rechazados y rollback sin archivo huerfano. Datos exclusivamente sinteticos en organizacion sin membresias. Se desplego imagen 7048218 con ingesta apagada: salud/commit OK, app/base healthy, POST interno 404, puerta temporal HTTPS 401/TLS verificado e INGESTA_ACTIVA=false. No se agrego el override publico ni se genero una clave de escritura.
+
+Pendientes: confirmacion del nuevo acceso, credencial dedicada en n8n, ejecucion real del tramo n8n -> CRM y PDF nuevo por WhatsApp. No se declara aprobado el recorrido completo.
