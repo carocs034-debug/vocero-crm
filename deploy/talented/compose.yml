@@ -1,0 +1,59 @@
+# Entorno independiente; el proxy se habilita con el override tras crear el administrador.
+name: talented-desarrollo
+services:
+  app:
+    image: talented-crm:desarrollo
+    build:
+      context: ../..
+      args:
+        SOURCE_COMMIT: ${SOURCE_COMMIT:?Define el commit de esta compilacion}
+    restart: unless-stopped
+    environment:
+      APP_BASE_URL: ${APP_BASE_URL:?Define la URL de desarrollo}
+      DATABASE_URL: postgresql://talented_dev:${POSTGRES_PASSWORD:?Define una clave nueva}@postgres:5432/talented_dev
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Genera un secreto nuevo}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Genera 32 bytes en base64}
+      META_WEBHOOK_VERIFY_TOKEN: ${META_WEBHOOK_VERIFY_TOKEN:?Genera un token nuevo}
+      # Sin credenciales de canales, proveedor IA ni cerebro en esta primera etapa.
+      BRAIN_DISPATCH_URL: ""
+      BRAIN_HEALTH_URL: ""
+      BOT_API_KEY: ""
+      CHANNELS: ""
+      AGENDA: ""
+      ATRIBUCION: ""
+      MEDIA_DIR: /data/media
+      MEDIA_STORE: disco
+    ports:
+      - "127.0.0.1:3100:3000"
+    volumes:
+      - archivos_dev:/data
+    networks:
+      - base_privada
+      - salida
+    depends_on:
+      postgres:
+        condition: service_healthy
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: talented_dev
+      POSTGRES_DB: talented_dev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define una clave nueva}
+    volumes:
+      - postgres_dev:/var/lib/postgresql/data
+    networks:
+      - base_privada
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U talented_dev -d talented_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  archivos_dev:
+  postgres_dev:
+networks:
+  base_privada:
+    internal: true
+  salida:
+    name: talented-desarrollo_salida

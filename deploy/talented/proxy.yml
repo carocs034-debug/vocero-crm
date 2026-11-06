@@ -1,0 +1,15 @@
+# Traefik existente usa network_mode=host y alcanza las redes bridge del VPS.
+services:
+  app:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=talented-desarrollo_salida
+      - traefik.http.routers.talented-dev.rule=Host(`dev-crm.talentedmx.com`)
+      - traefik.http.routers.talented-dev.entrypoints=websecure
+      - traefik.http.routers.talented-dev.tls.certresolver=letsencrypt
+      - traefik.http.routers.talented-dev.service=talented-dev
+      # Puerta temporal durante el alta inicial. Hash bcrypt generado en el VPS.
+      - traefik.http.routers.talented-dev.middlewares=talented-dev-acceso
+      - traefik.http.middlewares.talented-dev-acceso.basicauth.users=${TALENTED_SETUP_AUTH:?Configura el acceso temporal antes de publicar}
+      - traefik.http.middlewares.talented-dev-acceso.basicauth.removeheader=true
+      - traefik.http.services.talented-dev.loadbalancer.server.port=3000
