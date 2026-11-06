@@ -8,6 +8,7 @@
 - [x] Despliegue apagado y manual; respaldo en GitHub. Commit de imagen 7048218 verificado, app/base healthy, POST interno 404, puerta HTTPS 401/TLS valido e INGESTA_ACTIVA=false.
 - [x] Continuacion del piloto autorizada. Detalles operativos conservados en la bitacora privada.
 - [x] Ingreso privado completado por el usuario y ensayo manual integrado aprobado; repeticion sin duplicado, un registro y adjunto/analisis presentes.
-- [ ] PDF nuevo por WhatsApp y cierre supervisado de la prueba.
+- [x] PDF nuevo por WhatsApp: recorrido completo aprobado, ficha Nueva con PDF/analisis y revision pendiente. Un registro por mensaje y SHA256 del PDF coincidente con el original sintetico.
+- [x] Cierre supervisado: webhook pausado, sin escucha pendiente, workflow sin publicar, notas finales guardadas y respaldo privado exportado. Detalles operativos solo en bitacora privada.
 
 Notas n8n: al abrir el nodo nuevo se detecto sugerencia automatica de credencial Zernio. Se cambio Authentication=None y se desactivo el nodo. Tras guardar/recargar se verifico inactivo y sin esa seleccion visible. No se ejecuto el nodo ni se envio esa credencial al CRM. Plantilla publica tambien restaura inactivo y sin auth seleccionada.

@@ -74,3 +74,5 @@ Resultado de preparacion: 1476 pruebas, tipos/lint/build y ensayo real de ingest
 La continuacion del piloto fue autorizada. Los detalles de operacion se conservan exclusivamente en la bitacora privada. Sigue pendiente completar el recorrido integrado.
 
 El ensayo manual integrado posterior paso con datos ficticios: guardado inicial y repeticion del mismo mensaje, sin duplicar el registro. Se comprobaron adjunto, analisis y revision pendiente. El evento nuevo de WhatsApp sigue pendiente de la prueba supervisada.
+
+La prueba supervisada posterior con un PDF nuevo desde WhatsApp tambien paso: entrega al piloto, analisis y creacion de la ficha con adjunto privado. Se verificaron un registro del mensaje, integridad SHA256 del PDF frente al original sintetico, cobertura 50 %, score null y revision humana pendiente. Al terminar se pausaron las entregas, se comprobo que no quedara escucha activa y se mantuvo el workflow sin publicar. Las explicaciones del canvas y la bitacora se actualizaron; el respaldo operativo se conserva privado. Para repetir, seguir el procedimiento supervisado anterior.

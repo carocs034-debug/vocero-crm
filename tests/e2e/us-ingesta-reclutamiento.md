@@ -27,3 +27,7 @@ Tipos/lint/build y 1476 pruebas aprobados. Ensayo real ejecutado en VPS: salida 
 Pendientes: confirmacion del nuevo acceso, credencial dedicada en n8n, ejecucion real del tramo n8n -> CRM y PDF nuevo por WhatsApp. No se declara aprobado el recorrido completo.
 
 Avance posterior: ensayo manual integrado de n8n aprobado con el PDF ficticio. Primer guardado creada=true; repeticion del mismo mensaje creada=false y mismo id. Se verifico un unico registro, etapa Nueva, revision humana pendiente, PDF 144800 bytes, cobertura 0.5 y score null. La repeticion reutilizo el resultado previo y no invoco otra vez IA. Sigue pendiente el mensaje nuevo desde WhatsApp y el cierre supervisado de la prueba.
+
+Resultado final: envio nuevo del PDF ficticio desde WhatsApp completo Zernio -> n8n -> descarga/extraccion -> IA/validador -> CRM. Se confirmaron ficha Nueva, revision pendiente, CV 144800 bytes, cobertura 0.5 y score null. Un unico registro del mensaje nuevo; SHA256 del archivo almacenado identico al original sintetico. La referencia manual y el mensaje nuevo son dos pruebas distintas y conservan sus fichas respectivas.
+
+Se comprobo el cierre: webhook pausado, sin espera activa en n8n y workflow sin publicar. Se actualizaron las notas del canvas y se verificaron al recargar. El respaldo operativo queda privado; la plantilla publica continua saneada e inactiva. El piloto no implica recepcion continua ni uso con candidatos reales.
