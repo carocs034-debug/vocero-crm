@@ -7,6 +7,7 @@
 - [x] Ensayo real de concurrencia/rollback en Postgres y archivos: exit 0. Multipart real, 201/200 mismo id, un registro, bytes identicos, revision conservada, PDF distinto 409 y FK invalida sin archivo huerfano.
 - [x] Despliegue apagado y manual; respaldo en GitHub. Commit de imagen 7048218 verificado, app/base healthy, POST interno 404, puerta HTTPS 401/TLS valido e INGESTA_ACTIVA=false.
 - [x] Continuacion del piloto autorizada. Detalles operativos conservados en la bitacora privada.
-- [ ] Clave ingresada por usuario, ensayo integrado y PDF nuevo por WhatsApp; pausa final.
+- [x] Ingreso privado completado por el usuario y ensayo manual integrado aprobado; repeticion sin duplicado, un registro y adjunto/analisis presentes.
+- [ ] PDF nuevo por WhatsApp y cierre supervisado de la prueba.
 
 Notas n8n: al abrir el nodo nuevo se detecto sugerencia automatica de credencial Zernio. Se cambio Authentication=None y se desactivo el nodo. Tras guardar/recargar se verifico inactivo y sin esa seleccion visible. No se ejecuto el nodo ni se envio esa credencial al CRM. Plantilla publica tambien restaura inactivo y sin auth seleccionada.
