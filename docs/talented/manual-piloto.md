@@ -70,3 +70,5 @@ Pasos para habilitar: ver tests/e2e/us-ingesta-reclutamiento.md. Primero pruebas
 No usar CVs reales aun: quedan pendientes HMAC/cola del ingreso Zernio, retencion y antimalware/OCR. El endpoint valida forma del PDF y citas contra texto, no la interpretacion de la IA.
 
 Resultado de preparacion: 1476 pruebas, tipos/lint/build y ensayo real de ingesta concurrente/rollback aprobados. Imagen 7048218 instalada con ingesta deshabilitada: salud/commit y app/base healthy, POST 404 y puerta temporal HTTPS conservada. No se genero clave ni se agrego el override de acceso externo. El nodo nuevo de n8n permanece inactivo y con Authentication=None para evitar la seleccion automatica de una credencial ajena. Falta habilitacion autorizada y prueba del recorrido completo con n8n/WhatsApp.
+
+La continuacion del piloto fue autorizada. Los detalles de operacion se conservan exclusivamente en la bitacora privada. Sigue pendiente completar el recorrido integrado.
