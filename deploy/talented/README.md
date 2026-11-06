@@ -2,7 +2,7 @@
 
 Estado: copia funcionando en /opt/talented-desarrollo del VPS y disponible por HTTPS en dev-crm.talentedmx.com, protegida por autenticacion temporal adicional. Aplicacion y PostgreSQL saludables. Credenciales exclusivas creadas con autorizacion. Carril exento: herramientas de despliegue; no modifica comportamiento, contratos ni datos de la aplicacion.
 
-Base: etiqueta v2.7.0, commit 806fea1. Coincide con la version y commit verificados por https://crm.talentedmx.com/api/health el 6 de noviembre de 2026. El fork remoto conserva 2.5.1; esta rama local parte de la etiqueta oficial 2.7.0 y todavia no se ha subido.
+Base: etiqueta v2.7.0, commit 806fea1. Coincide con la version y commit verificados por https://crm.talentedmx.com/api/health el 6 de noviembre de 2026. main del fork remoto conserva 2.5.1; la rama chore/talented-entorno-desarrollo parte de la etiqueta oficial 2.7.0 y esta respaldada en GitHub.
 
 ## Aislamiento
 
@@ -35,6 +35,6 @@ El registro A dev-crm.talentedmx.com -> 179.197.83.216 se creo en cPanel con TTL
 
 El usuario autorizo HTTPS con acceso temporal protegido. Se genero una clave aleatoria exclusiva; usuario y clave solo en /root/talented-acceso-inicial.txt, permisos 600, fuera del repositorio. Hash bcrypt costo 12 en .env; ningun valor secreto en estas notas. Se habilito proxy.yml sin reiniciar Traefik ni servicios de produccion. Certificado TLS verificado por curl sin omitir validacion: ssl_verify_result=0. Sin autenticacion: HTTP 401. Con autenticacion leida en el VPS sin mostrarla: /register HTTP 200 y /api/health HTTP 200, ok=true, mediaWritable=true.
 
-El usuario completo el registro en Chrome. La base de desarrollo confirma una organizacion, un miembro con rol owner y una sesion. Se probo POST /api/auth/sign-up/email con cuerpo vacio y autenticacion temporal: devolvio HTTP 403 con el mensaje de registro cerrado. ALLOW_SIGNUP_TRUE=false. El administrador esta creado y el registro publico cerrado; no se crearon cuentas de prueba adicionales. Mantener la proteccion temporal mientras se desarrolla; retirarla requiere una decision explicita. GitHub sigue pendiente.
+El usuario completo el registro en Chrome. La base de desarrollo confirma una organizacion, un miembro con rol owner y una sesion. Se probo POST /api/auth/sign-up/email con cuerpo vacio y autenticacion temporal: devolvio HTTP 403 con el mensaje de registro cerrado. ALLOW_SIGNUP_TRUE=false. El administrador esta creado y el registro publico cerrado; no se crearon cuentas de prueba adicionales. Mantener la proteccion temporal mientras se desarrolla; retirarla requiere una decision explicita. El codigo, las plantillas saneadas y el manual publico estan respaldados en la rama chore/talented-entorno-desarrollo. Las bases y secretos se respaldan por separado fuera de Git.
 
 La clave de la puerta temporal no tiene vencimiento automatico: temporal describe su uso durante el desarrollo. Su rotacion o retirada debe registrarse cuando se decida. No compartirla por el chat ni incluirla en exportaciones del proyecto. Esta puerta tambien se aplica a la API publica del entorno; cualquier futura integracion de n8n con esta copia debera considerar ambas capas de autenticacion antes de probarse.
