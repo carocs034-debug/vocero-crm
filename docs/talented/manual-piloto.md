@@ -56,3 +56,5 @@ Con RECLUTAMIENTO=on, el menu Pipeline muestra las mismas postulaciones por etap
 5. Pulsar el nombre abre directamente el CV, analisis y notas de esa misma postulacion.
 
 El recorrido UI feliz y de errores se verifico con el arnes sintetico scripts/e2e-pipeline-reclutamiento.mjs; detalle en tests/e2e/us-pipeline-reclutamiento.md. Incluyo escritorio y ancho 390 px, paginacion, arrastre, selector, busqueda y conflictos. No agrega integraciones ni cambia n8n.
+
+Desplegado en dev-crm.talentedmx.com/pipeline con commit bcf0ce3: salud y HTTPS comprobados, app/base healthy y puerta temporal conservada. Imagen anterior conservada como talented-crm:antes-pipeline. El recorrido autenticado del VPS sigue pendiente del acceso del navegador; el recorrido funcional de las componentes se completo en el arnes local.
