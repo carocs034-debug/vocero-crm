@@ -1,5 +1,7 @@
 # Manual de referencia de Talented
 
+Para clonar el proyecto o levantarlo en otra computadora, consulta la [guía de traslado](traslado.md).
+
 Estado al 6 de noviembre de 2026. Este documento es la version publicable del proceso; el manual operativo detallado se conserva fuera del repositorio.
 
 ## Recorrido comprobado
