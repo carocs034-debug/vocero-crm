@@ -21,3 +21,21 @@ export const editarVacante = z.object({
   version: z.number().int().nonnegative(),
 });
 export type CriterioVacante = z.infer<typeof criterio>;
+export const requisitosVacante = z.array(criterio.omit({ peso: true })).min(1).max(20)
+  .refine(requisitos => new Set(requisitos.map(r => r.id)).size === requisitos.length);
+export type RequisitoVacante = z.infer<typeof requisitosVacante>[number];
+
+export function calcularPesos(requisitos: RequisitoVacante[], anterior?: CriterioVacante[]): CriterioVacante[] {
+  if (anterior?.length === requisitos.length && requisitos.every((r, i) =>
+    r.id === anterior[i]?.id && r.esencial === anterior[i]?.esencial && r.requisito === anterior[i]?.requisito)) {
+    return anterior;
+  }
+  const unidades = requisitos.map(r => r.esencial ? 2 : 1);
+  const total = unidades.reduce<number>((suma, valor) => suma + valor, 0);
+  const puntos = unidades.map(valor => Math.floor(100 * valor / total));
+  const sobrantes = 100 - puntos.reduce((suma, valor) => suma + valor, 0);
+  const orden = unidades.map((valor, indice) => ({ indice, resto: (100 * valor) % total }))
+    .sort((a, b) => b.resto - a.resto || a.indice - b.indice);
+  for (const { indice } of orden.slice(0, sobrantes)) puntos[indice] = puntos[indice]! + 1;
+  return requisitos.map((r, indice) => ({ ...r, peso: puntos[indice]! / 100 }));
+}
