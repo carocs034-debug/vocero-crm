@@ -1,5 +1,7 @@
 # Catálogo de vacantes de Talented
 
+En el formulario de Vacantes, un administrador puede generar una propuesta de rúbrica a partir del nombre y la descripción del puesto. Puede revisar y editar el borrador antes de guardarlo. Si la IA no está disponible, conserva el contenido del formulario y puede completar la rúbrica manualmente. Esta ampliación usa el formato de rúbrica vigente y no modifica el contrato de n8n.
+
 Carril de ciclo completo. El catálogo modifica el modelo de datos y añade una consulta para integraciones.
 
 El equipo abre Vacantes desde el CRM de reclutamiento. Puede registrar un puesto con nombre, código único y rúbrica, actualizarlo y cerrarlo. Los códigos iniciales propuestos son ALM para Almacenista y COORD-ALM para Coordinador de almacén.
