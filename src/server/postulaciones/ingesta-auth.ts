@@ -7,7 +7,9 @@ export function configuracionIngesta(): (AlcanceIngesta & { key: string }) | nul
   const e = process.env;
   if (!reclutamientoEnabled() || e.RECLUTAMIENTO_INGESTA !== "on") return null;
   const key = e.RECLUTAMIENTO_INGESTA_KEY, org = e.RECLUTAMIENTO_INGESTA_ORG, cuenta = e.RECLUTAMIENTO_INGESTA_CUENTA, conversacion = e.RECLUTAMIENTO_INGESTA_CONVERSACION, vacante = e.RECLUTAMIENTO_INGESTA_VACANTE;
-  return key && key.length >= 32 && key.length <= 512 && org && /^[\w.-]{1,200}$/.test(org) && cuenta && conversacion && vacante && vacante.trim().length >= 2 && vacante.length <= 120 ? { key, org, cuenta, conversacion, vacante } : null;
+  return key && key.length >= 32 && key.length <= 512 && org && /^[\w.-]{1,200}$/.test(org) && cuenta && conversacion && vacante && vacante.trim().length >= 2 && vacante.length <= 120
+    ? { key, org, cuenta, conversacion, vacante, buzon: e.RECLUTAMIENTO_INGESTA_BUZON?.trim() || undefined }
+    : null;
 }
 export function autorizarIngesta(req: Request, key: string): Response | null {
   const dada = req.headers.get("x-reclutamiento-key") ?? "";

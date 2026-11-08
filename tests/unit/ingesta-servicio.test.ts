@@ -24,8 +24,25 @@ it("una confirmacion ambigua de COMMIT nunca borra el CV potencialmente vinculad
   expect(sim.guardar).toHaveBeenCalledTimes(1);expect(sim.borrar).not.toHaveBeenCalled();
 });
 it("rechaza otro alcance antes de tocar almacenamiento o SQL", async()=> {
-  await expect(ingerirPostulacion(alcance,{...datos,conversacion_id:"ajena"},archivo)).rejects.toMatchObject({status:403});
+  const ajena = datosIngestaSchema.parse({...datos,conversacion_id:"ajena"});
+  await expect(ingerirPostulacion(alcance,ajena,archivo)).rejects.toMatchObject({status:403});
   expect(sim.ejecutar).not.toHaveBeenCalled();expect(sim.guardar).not.toHaveBeenCalled();
+});
+it("limita correo al buzón autorizado y reutiliza la ficha al repetir", async () => {
+  const correo = datosIngestaSchema.parse({
+    version: 1, canal: "correo", buzon: "pruebas@example.test", mensaje_id: "<prueba@example.test>",
+    nombre: "Persona sintética", vacante_indicada: false,
+  });
+  await expect(ingerirPostulacion(alcance, correo, archivo)).rejects.toMatchObject({status: 403});
+  expect(sim.guardar).not.toHaveBeenCalled();
+  const autorizado = {...alcance, buzon: "Pruebas@example.test"};
+  const primera = await ingerirPostulacion(autorizado, correo, archivo);
+  const fila = sim.insertar.mock.calls[0]?.[0];
+  expect(fila).toMatchObject({canal: "correo", etapa: "por_completar", claveExterna: expect.stringMatching(/^ingesta:correo:/)});
+  sim.filas = [fila];
+  sim.leer.mockResolvedValue(archivo.bytes);
+  await expect(ingerirPostulacion(autorizado, correo, archivo)).resolves.toMatchObject({creada: false, id: primera.id});
+  expect(sim.guardar).toHaveBeenCalledTimes(1);
 });
 it("guarda un PDF sin vacante en Por completar y sin análisis de Almacenista", async () => {
   const pendiente = datosIngestaSchema.parse({

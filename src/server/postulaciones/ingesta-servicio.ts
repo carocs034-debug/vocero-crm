@@ -9,7 +9,10 @@ import { ErrorPostulacion, nombreCvSeguro, validarPdf } from "./validacion";
 import { validarAlcanceYCitas, type AlcanceIngesta, type DatosIngesta } from "./ingesta-contrato";
 export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIngesta, archivo: { bytes: Buffer; mime: string; nombre: string }) {
   validarAlcanceYCitas(datos, alcance); validarPdf(archivo.bytes, archivo.mime);
-  const clave = `ingesta:zernio:${createHash("sha256").update(JSON.stringify([datos.cuenta_id, datos.mensaje_id])).digest("hex")}`;
+  const esCorreo = "buzon" in datos;
+  const origen = esCorreo ? "correo" : "zernio";
+  const cuenta = esCorreo ? datos.buzon.toLowerCase() : datos.cuenta_id;
+  const clave = `ingesta:${origen}:${createHash("sha256").update(JSON.stringify([cuenta, datos.mensaje_id])).digest("hex")}`;
   const tabla = schema.postulacion;
   let nuevoArchivo: string | null = null;
   let insercionTerminada = false;
@@ -48,7 +51,7 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
       await tx.insert(tabla).values({ id, organizationId: alcance.org, nombre: datos.nombre,
         vacante,
         etapa: vacantePendiente ? "por_completar" : "nueva",
-        canal: "whatsapp", claveExterna: clave, analisis,
+        canal: esCorreo ? "correo" : "whatsapp", claveExterna: clave, analisis,
         cvStorageId: storageId, cvNombre: nombreCvSeguro(archivo.nombre), cvBytes: archivo.bytes.length });
       insercionTerminada = true;
       return { creada: true, id, url_ficha: `/postulaciones?id=${id}` };
