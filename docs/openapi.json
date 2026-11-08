@@ -41,6 +41,47 @@
         "x-codigos-409": ["ai_paused", "window_closed", "sandbox_violation", "message_limit", "no_org"]
       }
     },
+    "/api/bot/vacantes": {
+      "get": {
+        "summary": "Consulta las vacantes abiertas de la organización",
+        "description": "Disponible con reclutamiento activo. Un código o nombre exacto confirma la vacante. Las coincidencias parciales requieren aclaración.",
+        "parameters": [
+          { "name": "q", "in": "query", "schema": { "type": "string", "maxLength": 120 }, "description": "Código o nombre. Si se omite, devuelve las vacantes abiertas." }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultado de la consulta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["estado", "vacantes"],
+                  "properties": {
+                    "estado": { "type": "string", "enum": ["listado", "confirmada", "requiere_aclaracion", "sin_coincidencia"] },
+                    "vacantes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["codigo", "nombre", "descripcion"],
+                        "properties": {
+                          "codigo": { "type": "string" },
+                          "nombre": { "type": "string" },
+                          "descripcion": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Credencial del agente ausente o inválida" },
+          "404": { "description": "Reclutamiento apagado u organización no disponible" },
+          "422": { "description": "Consulta demasiado larga" },
+          "429": { "description": "Límite de solicitudes alcanzado" }
+        }
+      }
+    },
     "/api/bot/profile": {
       "get": {
         "summary": "Perfil del agente y conocimiento",
