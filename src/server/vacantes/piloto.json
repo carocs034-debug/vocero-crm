@@ -1,0 +1,98 @@
+[
+  {
+    "codigo": "ALM",
+    "nombre": "Almacenista",
+    "descripcion": "Temporada de diciembre. Col. México Oriente. Lunes a sábado, disponibilidad inmediata. $2,300 semanales netos. Carga, descarga y acomodo en almacén frío y transporte, verificación de producto y preparación de pedidos.",
+    "activa": true,
+    "version": 0,
+    "rubrica": [
+      {
+        "id": "carga_descarga",
+        "peso": 0.3,
+        "esencial": true,
+        "requisito": "Experiencia en carga y descarga, con funcion explicita en el CV."
+      },
+      {
+        "id": "operacion_almacen",
+        "peso": 0.2,
+        "esencial": false,
+        "requisito": "Recepcion, acomodo y preparacion de pedidos: 1 con las tres, 0.75 con dos, 0.5 con una."
+      },
+      {
+        "id": "traslado",
+        "peso": 0.15,
+        "esencial": true,
+        "requisito": "Facilidad de traslado a Col. Mexico Oriente. Cerca de Col. Mexico no confirma Mexico Oriente: desconocido."
+      },
+      {
+        "id": "horario",
+        "peso": 0.15,
+        "esencial": true,
+        "requisito": "Disponibilidad de lunes a sabado, confirmacion explicita."
+      },
+      {
+        "id": "inicio",
+        "peso": 0.1,
+        "esencial": true,
+        "requisito": "Disponibilidad inmediata, confirmacion explicita. Empleo actual no implica indisponibilidad."
+      },
+      {
+        "id": "temporada",
+        "peso": 0.1,
+        "esencial": true,
+        "requisito": "Disponibilidad para temporada de diciembre, confirmacion explicita."
+      }
+    ]
+  },
+  {
+    "codigo": "COORD-ALM",
+    "nombre": "Coordinador de almacén",
+    "descripcion": "Temporada de noviembre a diciembre. Col. México Oriente. Lunes a sábado, disponibilidad inmediata. $3,200 semanales netos. Liderazgo de auxiliares, inventarios, recepción, almacenamiento, resurtido y embarques.",
+    "activa": true,
+    "version": 0,
+    "rubrica": [
+      {
+        "id": "liderazgo",
+        "peso": 0.3,
+        "esencial": true,
+        "requisito": "Liderar personal de almacén y asignar tareas. Ausencia de evidencia es desconocido; declaración explícita de no haber supervisado ni asignado tareas es no_cumple."
+      },
+      {
+        "id": "experiencia_similar",
+        "peso": 0.25,
+        "esencial": true,
+        "requisito": "Al menos dos años en funciones de coordinación de almacén sustentados con fechas y funciones. Los años operativos no equivalen a años de coordinación. Sin duración sustentada, desconocido; si el CV declara ausencia de experiencia de coordinación, no_cumple."
+      },
+      {
+        "id": "operacion_almacen",
+        "peso": 0.2,
+        "esencial": false,
+        "requisito": "Recepción y validación, almacenamiento y resurtido, inventarios, y entarimado o embarque. Evalúa evidencia técnica incluso si las tareas fueron operativas: 1 con cuatro grupos, 0.75 con tres, 0.5 con dos, 0.25 con uno."
+      },
+      {
+        "id": "traslado",
+        "peso": 0.05,
+        "esencial": true,
+        "requisito": "Facilidad de traslado declarada a Col. México Oriente. Cercanía genérica a Col. México no basta."
+      },
+      {
+        "id": "horario",
+        "peso": 0.05,
+        "esencial": true,
+        "requisito": "Disponibilidad explícita de lunes a sábado."
+      },
+      {
+        "id": "inicio",
+        "peso": 0.05,
+        "esencial": true,
+        "requisito": "Disponibilidad inmediata explícita."
+      },
+      {
+        "id": "temporada",
+        "peso": 0.1,
+        "esencial": true,
+        "requisito": "Disponibilidad explícita durante noviembre y diciembre."
+      }
+    ]
+  }
+]

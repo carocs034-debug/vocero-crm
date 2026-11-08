@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
 import { newId } from "@/lib/db/ids";
+import type { AnalisisPostulacion } from "@/lib/postulaciones";
 import { guardarMedia, leerMedia, borrarMedia } from "@/lib/storage/medios";
 import { ErrorPostulacion, nombreCvSeguro, validarPdf } from "./validacion";
 import { validarAlcanceYCitas, type AlcanceIngesta, type DatosIngesta } from "./ingesta-contrato";
@@ -23,12 +24,31 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
         if (!guardado.equals(archivo.bytes)) throw new ErrorPostulacion(409, "mensaje_con_otro_pdf", "El mensaje ya fue recibido con otro PDF");
         return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
       }
+      const vacantePendiente = datos.vacante_indicada === false;
+      let vacante = vacantePendiente ? "Por confirmar" : alcance.vacante;
+      let analisis: AnalisisPostulacion | null = vacantePendiente ? null : datos.analisis;
+      if (!vacantePendiente && datos.rubrica_catalogo) {
+        const referencia = datos.rubrica_catalogo;
+        const catalogo = schema.vacanteReclutamiento;
+        const [puesto] = await tx.select().from(catalogo)
+          .where(scoped(catalogo.organizationId, alcance.org, eq(catalogo.codigo, referencia.codigo), eq(catalogo.activa, true)))
+          .limit(1);
+        const rubrica = puesto?.rubricas[referencia.version - 1];
+        if (!puesto || !rubrica || rubrica.length !== datos.analisis.criterios.length ||
+            rubrica.some(c => !datos.analisis.criterios.some(resultado => resultado.id === c.id))) {
+          throw new ErrorPostulacion(422, "rubrica_invalida", "La evaluación no corresponde a una rúbrica de la vacante abierta");
+        }
+        vacante = puesto.nombre;
+        analisis = { ...datos.analisis, rubrica_catalogo: referencia };
+      }
       const id = newId("postulacion"), storageId = newId("mediaAsset");
       // Limpiar tambien un archivo parcialmente escrito si falla la operacion.
       nuevoArchivo = storageId;
       await guardarMedia(alcance.org, storageId, archivo.bytes, "application/pdf");
-      await tx.insert(tabla).values({ id, organizationId: alcance.org, nombre: datos.nombre, vacante: alcance.vacante,
-        canal: "whatsapp", claveExterna: clave, analisis: datos.analisis,
+      await tx.insert(tabla).values({ id, organizationId: alcance.org, nombre: datos.nombre,
+        vacante,
+        etapa: vacantePendiente ? "por_completar" : "nueva",
+        canal: "whatsapp", claveExterna: clave, analisis,
         cvStorageId: storageId, cvNombre: nombreCvSeguro(archivo.nombre), cvBytes: archivo.bytes.length });
       insercionTerminada = true;
       return { creada: true, id, url_ficha: `/postulaciones?id=${id}` };

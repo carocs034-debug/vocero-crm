@@ -65,6 +65,7 @@ export function appNavGroups({
     { href: "/contacts", label: "Contactos", icon: Users },
   ];
   if (reclutamiento) trabajo.push({ href: "/postulaciones", label: "Postulaciones", icon: ClipboardList });
+  if (reclutamiento) trabajo.push({ href: "/vacantes", label: "Vacantes", icon: ClipboardList });
   // Citas va después de Contactos: es el paso siguiente de un trato, no una
   // sección aparte.
   if (agenda) trabajo.push({ href: "/bookings", label: "Citas", icon: CalendarDays });

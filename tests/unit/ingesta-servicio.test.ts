@@ -27,6 +27,16 @@ it("rechaza otro alcance antes de tocar almacenamiento o SQL", async()=> {
   await expect(ingerirPostulacion(alcance,{...datos,conversacion_id:"ajena"},archivo)).rejects.toMatchObject({status:403});
   expect(sim.ejecutar).not.toHaveBeenCalled();expect(sim.guardar).not.toHaveBeenCalled();
 });
+it("guarda un PDF sin vacante en Por completar y sin análisis de Almacenista", async () => {
+  const pendiente = datosIngestaSchema.parse({
+    version: 1, cuenta_id: alcance.cuenta, conversacion_id: alcance.conversacion,
+    mensaje_id: "cv-sin-vacante", nombre: "Persona sintética", vacante_indicada: false,
+  });
+  await ingerirPostulacion(alcance, pendiente, archivo);
+  expect(sim.insertar).toHaveBeenCalledWith(expect.objectContaining({
+    vacante: "Por confirmar", etapa: "por_completar", analisis: null,
+  }));
+});
 it("la insercion fija la organizacion, vacante y etapa pendiente, sin aceptar datos de otro tenant", async()=> {
   const resultado = await ingerirPostulacion(alcance,datos,archivo);
   expect(resultado.creada).toBe(true);

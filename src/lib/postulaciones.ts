@@ -29,7 +29,9 @@ export const analisisPostulacionSchema = z.object({
   }
   if (value.cobertura < 0.7 && value.score !== null) ctx.addIssue({ code: "custom", message: "Cobertura insuficiente para una calificación" });
 });
-export type AnalisisPostulacion = z.infer<typeof analisisPostulacionSchema>;
+export type AnalisisPostulacion = z.infer<typeof analisisPostulacionSchema> & {
+  rubrica_catalogo?: { codigo: string; version: number };
+};
 const opcional = (max: number) => z.string().trim().max(max).optional().transform(v => v || null);
 export const crearPostulacionSchema = z.object({
   nombre: z.string().trim().min(2, "Escribe el nombre").max(120),

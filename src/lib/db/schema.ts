@@ -5,12 +5,14 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import type { AnalisisPostulacion } from "../postulaciones";
+import type { CriterioVacante } from "../vacantes";
 
 /**
  * Tiempo: todas las columnas son `timestamp without time zone` y el marco es
@@ -114,6 +116,15 @@ export const invitation = pgTable("invitation", {
 /* ============================================================
  * Dominio (toda tabla lleva organization_id NOT NULL + índice org-first)
  * ============================================================ */
+
+export const vacanteReclutamiento = pgTable("vacante_reclutamiento", {
+  organizationId: text("organization_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
+  codigo: text("codigo").notNull(),
+  nombre: text("nombre").notNull(),
+  descripcion: text("descripcion").notNull(),
+  activa: boolean("activa").notNull().default(true),
+  rubricas: jsonb("rubricas").$type<CriterioVacante[][]>().notNull(),
+}, t => [primaryKey({ columns: [t.organizationId, t.codigo] })]);
 
 export const postulacion = pgTable("postulacion", {
   id: text("id").primaryKey(),

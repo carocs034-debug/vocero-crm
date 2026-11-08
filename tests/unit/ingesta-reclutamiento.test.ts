@@ -34,6 +34,7 @@ it("rechaza otra conversacion, organizacion inyectada, citas inventadas y score 
   const entrada = datosIngestaSchema.parse(datos()); validarAlcanceYCitas(entrada, alcance);
   expect(() => validarAlcanceYCitas({ ...entrada, conversacion_id: "ajena" }, alcance)).toThrow("fuera del piloto");
   expect(() => datosIngestaSchema.parse({ ...datos(), organization_id: "otra" })).toThrow();
+  if (entrada.vacante_indicada === false) throw new Error("Se esperaba un análisis");
   entrada.analisis.criterios[0]!.evidencia = ["Cita que no existe"];
   expect(() => validarAlcanceYCitas(entrada, alcance)).toThrow("evidencia ausente");
   expect(() => datosIngestaSchema.parse({ ...datos(), analisis: { ...datos().analisis, score: 8 } })).toThrow();
