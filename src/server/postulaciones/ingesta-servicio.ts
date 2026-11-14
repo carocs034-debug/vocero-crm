@@ -5,11 +5,12 @@ import { scoped } from "@/lib/db/tenant";
 import { newId } from "@/lib/db/ids";
 import type { AnalisisPostulacion } from "@/lib/postulaciones";
 import { guardarMedia, leerMedia, borrarMedia } from "@/lib/storage/medios";
-import { ErrorPostulacion, nombreCvSeguro, validarPdf } from "./validacion";
+import { ErrorPostulacion, nombreCvSeguro, validarCvCorreo, validarPdf } from "./validacion";
 import { validarAlcanceYCitas, type AlcanceIngesta, type DatosIngesta } from "./ingesta-contrato";
 export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIngesta, archivo: { bytes: Buffer; mime: string; nombre: string }) {
-  validarAlcanceYCitas(datos, alcance); validarPdf(archivo.bytes, archivo.mime);
   const esCorreo = "buzon" in datos;
+  validarAlcanceYCitas(datos, alcance);
+  (esCorreo ? validarCvCorreo : validarPdf)(archivo.bytes, archivo.mime);
   const origen = esCorreo ? "correo" : "zernio";
   const cuenta = esCorreo ? datos.buzon.toLowerCase() : datos.cuenta_id;
   const clave = `ingesta:${origen}:${createHash("sha256").update(JSON.stringify([cuenta, datos.mensaje_id])).digest("hex")}`;
@@ -57,12 +58,12 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
       const id = newId("postulacion"), storageId = newId("mediaAsset");
       // Limpiar tambien un archivo parcialmente escrito si falla la operacion.
       nuevoArchivo = storageId;
-      await guardarMedia(alcance.org, storageId, archivo.bytes, "application/pdf");
+      await guardarMedia(alcance.org, storageId, archivo.bytes, archivo.mime);
       await tx.insert(tabla).values({ id, organizationId: alcance.org, nombre: datos.nombre,
         vacante,
         etapa: vacantePendiente ? "por_completar" : "nueva",
         canal: esCorreo ? "correo" : "whatsapp", claveExterna: clave, analisis,
-        cvStorageId: storageId, cvNombre: nombreCvSeguro(archivo.nombre), cvBytes: archivo.bytes.length });
+        cvStorageId: storageId, cvNombre: nombreCvSeguro(archivo.nombre, archivo.mime), cvBytes: archivo.bytes.length });
       insercionTerminada = true;
       return { creada: true, id, url_ficha: `/postulaciones?id=${id}` };
     });

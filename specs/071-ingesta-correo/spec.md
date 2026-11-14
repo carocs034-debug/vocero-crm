@@ -1,5 +1,7 @@
 # Ingesta de CV por correo
 
+La ingesta de correo también admite un JPG o PNG por mensaje. El OCR lee el adjunto y la ficha conserva los bytes originales con su formato de descarga. Si el texto no es utilizable, la ficha queda pendiente de revisión.
+
 Carril completo. Especificación redactada después del primer borrador del contrato.
 
 - Un PDF de correo queda en Postulaciones con origen Correo. Una vacante abierta confirmada conserva su rúbrica y versión. Sin confirmación, queda en Por completar sin calificación.

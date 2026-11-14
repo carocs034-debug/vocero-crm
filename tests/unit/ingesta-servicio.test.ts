@@ -64,6 +64,24 @@ it("guarda un PDF sin vacante en Por completar y sin análisis de Almacenista", 
     vacante: "Por confirmar", etapa: "por_completar", analisis: null,
   }));
 });
+it.each([
+  ["image/png", "png", "89504e470d0a1a0a"],
+  ["image/jpeg", "jpg", "ffd8ffe00010"],
+])("conserva el adjunto %s al recibirlo por correo", async (mime, extension, firma) => {
+  const buzon = "pruebas@example.test";
+  const correo = datosIngestaSchema.parse({
+    version: 1, canal: "correo", buzon, mensaje_id: "<imagen@example.test>",
+    nombre: "Persona sintética", vacante_indicada: false,
+  });
+  const bytes = Buffer.from(firma, "hex");
+  const imagen = { bytes, mime, nombre: "CV.txt" };
+  await expect(ingerirPostulacion(alcance, datos, imagen)).rejects.toMatchObject({code: "pdf_invalido"});
+  await expect(ingerirPostulacion({...alcance, buzon}, correo, {...imagen, bytes: Buffer.from("<html>")}))
+    .rejects.toMatchObject({code: "imagen_invalida"});
+  await ingerirPostulacion({...alcance, buzon}, correo, imagen);
+  expect(sim.guardar).toHaveBeenCalledWith(alcance.org, expect.any(String), bytes, mime);
+  expect(sim.insertar).toHaveBeenCalledWith(expect.objectContaining({cvNombre: `CV.txt.${extension}`, etapa: "por_completar"}));
+});
 it.each(["pendiente", "revisada"])("reprocesa el mismo correo con ficha %s", async revisionHumana => {
   const base = {version: 1, canal: "correo", buzon: "pruebas@example.test",
     mensaje_id: "<prueba@example.test>", nombre: "Persona sintética"};

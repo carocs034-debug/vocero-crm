@@ -54,8 +54,8 @@ export const adjuntar = rutaPostulaciones(async (s, req: Request, ctx: Contexto)
   return Response.json({ postulacion }, { headers: privado });
 });
 export const descargar = rutaPostulaciones(async (s, _req: Request, ctx: Contexto) => {
-  const { bytes, nombre } = await descargarCv(s.organizationId, await idDe(ctx));
-  return new Response(new Uint8Array(bytes), { headers: { ...privado, "Content-Type": "application/pdf", "Content-Length": String(bytes.length),
+  const { bytes, nombre, mime } = await descargarCv(s.organizationId, await idDe(ctx));
+  return new Response(new Uint8Array(bytes), { headers: { ...privado, "Content-Type": mime, "Content-Length": String(bytes.length),
     "Content-Disposition": `attachment; filename="curriculum.pdf"; filename*=UTF-8''${encodeURIComponent(nombre).replace(/'/g, "%27")}`,
     "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "sandbox" } });
 });

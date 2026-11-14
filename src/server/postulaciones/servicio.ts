@@ -6,7 +6,7 @@ import { guardarMedia, leerMedia, borrarMedia } from "@/lib/storage/medios";
 import type { SessionContext } from "@/lib/auth/session";
 import { crearPostulacionSchema, filtroPostulacionesSchema, revisionPostulacionSchema, type PostulacionFicha } from "@/lib/postulaciones";
 import type { z } from "zod";
-import { ErrorPostulacion, nombreCvSeguro, validarPdf } from "./validacion";
+import { ErrorPostulacion, formatoCv, nombreCvSeguro, validarPdf } from "./validacion";
 
 const tabla = schema.postulacion;
 export function fichaDe(fila: typeof tabla.$inferSelect): PostulacionFicha {
@@ -83,5 +83,6 @@ export async function descargarCv(org: string, id: string) {
   const fila = await obtenerPostulacion(org, id);
   if (!fila.cvStorageId) throw new ErrorPostulacion(404, "sin_cv", "Esta postulación no tiene CV");
   const bytes = await leerMedia(org, fila.cvStorageId);
-  return { bytes, nombre: nombreCvSeguro(fila.cvNombre ?? "curriculum.pdf") };
+  const mime = formatoCv(bytes);
+  return { bytes, mime, nombre: nombreCvSeguro(fila.cvNombre ?? "curriculum.pdf", mime) };
 }
