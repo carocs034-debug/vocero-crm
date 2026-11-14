@@ -25,6 +25,19 @@ import { datosIngestaSchema } from "@/server/postulaciones/ingesta-contrato";
 const alcance = { org: "org_a", cuenta: "cuenta", conversacion: "hilo", vacante: "Almacenista" };
 const datos = datosIngestaSchema.parse({ version:1,cuenta_id:"cuenta",conversacion_id:"hilo",mensaje_id:"mensaje",nombre:"Persona sintetica",texto_extraido:"Texto sintetico sin datos reales. ".repeat(20),analisis:{resumen_profesional:"Sin evidencia suficiente",criterios:[],cobertura:0,score:null,requisitos_pendientes:[],alertas_documentales:[]} });
 const archivo = { bytes: Buffer.from("%PDF-1.4\n%%EOF"), mime:"application/pdf", nombre:"cv.pdf" };
+it.each(["falta_cv", "varios_adjuntos"])("registra %s sin almacenar ni duplicar un archivo", async motivo => {
+  const buzon = "pruebas@example.test";
+  const entrada = datosIngestaSchema.parse({version: 1, canal: "correo", buzon, mensaje_id: "prueba",
+    nombre: "Persona sintética", vacante_indicada: false, fallo_procesamiento: motivo});
+  const primera = await ingerirPostulacion({...alcance, buzon}, entrada);
+  expect(sim.insertar.mock.calls[0]?.[0]).toMatchObject({
+    etapa: "por_completar", analisis: {fallo_procesamiento: motivo},
+  });
+  sim.filas = [sim.insertar.mock.calls[0]?.[0]];
+  await expect(ingerirPostulacion({...alcance, buzon}, entrada)).resolves.toMatchObject({creada: false, id: primera.id});
+  expect(sim.insertar).toHaveBeenCalledTimes(1);
+  expect(sim.guardar).not.toHaveBeenCalled();
+});
 beforeEach(()=> { vi.clearAllMocks(); sim.filas=[];sim.puestos=[];sim.commitFalla=false;sim.guardar.mockResolvedValue(undefined);sim.insertar.mockResolvedValue(undefined);sim.borrar.mockResolvedValue(undefined); });
 it("un fallo de insercion revierte solo el archivo nuevo", async()=> {
   sim.insertar.mockRejectedValue(new Error("FK invalida"));

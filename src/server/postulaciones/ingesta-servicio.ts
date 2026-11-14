@@ -7,10 +7,13 @@ import type { AnalisisPostulacion } from "@/lib/postulaciones";
 import { guardarMedia, leerMedia, borrarMedia } from "@/lib/storage/medios";
 import { ErrorPostulacion, nombreCvSeguro, validarCvCorreo, validarPdf } from "./validacion";
 import { validarAlcanceYCitas, type AlcanceIngesta, type DatosIngesta } from "./ingesta-contrato";
-export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIngesta, archivo: { bytes: Buffer; mime: string; nombre: string }) {
+export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIngesta, archivo?: { bytes: Buffer; mime: string; nombre: string }) {
   const esCorreo = "buzon" in datos;
   validarAlcanceYCitas(datos, alcance);
-  (esCorreo ? validarCvCorreo : validarPdf)(archivo.bytes, archivo.mime);
+  const fallo = "fallo_procesamiento" in datos ? datos.fallo_procesamiento : undefined;
+  const sinAdjunto = fallo === "falta_cv" || fallo === "varios_adjuntos";
+  if (Boolean(archivo) === sinAdjunto) throw new ErrorPostulacion(422, "campos_invalidos", "El archivo debe corresponder al motivo de revisión");
+  if (archivo) (esCorreo ? validarCvCorreo : validarPdf)(archivo.bytes, archivo.mime);
   const origen = esCorreo ? "correo" : "zernio";
   const cuenta = esCorreo ? datos.buzon.toLowerCase() : datos.cuenta_id;
   const clave = `ingesta:${origen}:${createHash("sha256").update(JSON.stringify([cuenta, datos.mensaje_id])).digest("hex")}`;
@@ -24,13 +27,15 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
       const [previa] = await tx.select().from(tabla).where(scoped(tabla.organizationId, alcance.org, eq(tabla.claveExterna, clave))).limit(1);
       const vacantePendiente = datos.vacante_indicada === false;
       const perfil = "perfil" in datos ? datos.perfil : undefined;
-      const fallo = "fallo_procesamiento" in datos ? datos.fallo_procesamiento : undefined;
       const puedeCompletar = previa?.canal === "correo" && previa.vacante === "Por confirmar" &&
         previa.etapa === "por_completar" && previa.revisionHumana === "pendiente";
       if (previa) {
-        if (!previa.cvStorageId) throw new ErrorPostulacion(409, "ingesta_incompleta", "El mensaje requiere revisión del operador");
-        const guardado = await leerMedia(alcance.org, previa.cvStorageId);
-        if (!guardado.equals(archivo.bytes)) throw new ErrorPostulacion(409, "mensaje_con_otro_pdf", "El mensaje ya fue recibido con otro PDF");
+        if (!archivo) return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
+        if (!previa.cvStorageId && !puedeCompletar) throw new ErrorPostulacion(409, "ingesta_incompleta", "El mensaje requiere revisión del operador");
+        if (previa.cvStorageId) {
+          const guardado = await leerMedia(alcance.org, previa.cvStorageId);
+          if (!guardado.equals(archivo.bytes)) throw new ErrorPostulacion(409, "mensaje_con_otro_pdf", "El mensaje ya fue recibido con otro PDF");
+        }
         const anterior = previa.analisis;
         const sinAnalisis = anterior === null || Boolean(anterior.fallo_procesamiento);
         const agregarPerfil = perfil && (sinAnalisis ||
@@ -86,21 +91,30 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
         analisis = { ...datos.analisis, rubrica_catalogo: referencia };
       }
       if (previa) {
+        const adjuntar = archivo && !previa.cvStorageId;
+        if (adjuntar) {
+          nuevoArchivo = newId("mediaAsset");
+          await guardarMedia(alcance.org, nuevoArchivo, archivo.bytes, archivo.mime);
+        }
         await tx.update(tabla).set({
           vacante, analisis, etapa: vacantePendiente ? previa.etapa : "nueva", actualizadaEn: new Date(),
+          ...(adjuntar && { cvStorageId: nuevoArchivo, cvNombre: nombreCvSeguro(archivo.nombre, archivo.mime), cvBytes: archivo.bytes.length }),
           version: sql`${tabla.version} + 1`,
         }).where(scoped(tabla.organizationId, alcance.org, eq(tabla.id, previa.id), eq(tabla.version, previa.version)));
+        insercionTerminada = true;
         return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
       }
       const id = newId("postulacion"), storageId = newId("mediaAsset");
       // Limpiar tambien un archivo parcialmente escrito si falla la operacion.
-      nuevoArchivo = storageId;
-      await guardarMedia(alcance.org, storageId, archivo.bytes, archivo.mime);
+      if (archivo) {
+        nuevoArchivo = storageId;
+        await guardarMedia(alcance.org, storageId, archivo.bytes, archivo.mime);
+      }
       await tx.insert(tabla).values({ id, organizationId: alcance.org, nombre: datos.nombre,
         vacante,
         etapa: vacantePendiente ? "por_completar" : "nueva",
         canal: esCorreo ? "correo" : "whatsapp", claveExterna: clave, analisis,
-        cvStorageId: storageId, cvNombre: nombreCvSeguro(archivo.nombre, archivo.mime), cvBytes: archivo.bytes.length });
+        ...(archivo && { cvStorageId: storageId, cvNombre: nombreCvSeguro(archivo.nombre, archivo.mime), cvBytes: archivo.bytes.length }) });
       insercionTerminada = true;
       return { creada: true, id, url_ficha: `/postulaciones?id=${id}` };
     });

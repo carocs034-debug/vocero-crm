@@ -26,6 +26,10 @@ export const datosIngestaSchema = z.union([
   }).strict(),
   datosCorreoSchema.extend({
     vacante_indicada: z.literal(false),
+    fallo_procesamiento: z.enum(["falta_cv", "varios_adjuntos"]),
+  }).strict(),
+  datosCorreoSchema.extend({
+    vacante_indicada: z.literal(false),
     fallo_procesamiento: z.enum(["lectura_cv", "analisis_ia", "catalogo"]).optional(),
     perfil: z.object({
       resumen_profesional: z.string().trim().min(1).max(6000),

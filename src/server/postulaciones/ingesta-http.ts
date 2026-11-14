@@ -15,13 +15,16 @@ export async function recibirIngesta(req: Request) {
     let form: FormData;
     try { form = await new Request(req.url, { method: "POST", headers: req.headers, body: new Uint8Array(bytes) }).formData(); }
     catch { throw new ErrorPostulacion(422, "formulario_invalido", "No se pudo leer el formulario"); }
-    if (Array.from(form.keys()).length !== 2 || form.getAll("datos").length !== 1 || form.getAll("archivo").length !== 1) throw new ErrorPostulacion(422, "campos_invalidos", "Se requieren datos y archivo únicos");
     const raw = form.get("datos"), archivo = form.get("archivo");
-    if (typeof raw !== "string" || Buffer.byteLength(raw) > 120 * 1024 || !(archivo instanceof File)) throw new ErrorPostulacion(422, "campos_invalidos", "Datos o archivo inválidos");
+    if ([...form.keys()].some(k => k !== "datos" && k !== "archivo") ||
+        form.getAll("datos").length !== 1 || form.getAll("archivo").length > 1 ||
+        typeof raw !== "string" || Buffer.byteLength(raw) > 120 * 1024 ||
+        (archivo !== null && !(archivo instanceof File))) throw new ErrorPostulacion(422, "campos_invalidos", "Datos o archivo inválidos");
     let json: unknown;
     try { json = JSON.parse(raw); } catch { throw new ErrorPostulacion(422, "json_invalido", "JSON inválido"); }
     const datos = datosIngestaSchema.parse(json);
-    const result = await ingerirPostulacion(config, datos, { bytes: Buffer.from(await archivo.arrayBuffer()), mime: archivo.type, nombre: archivo.name });
+    const result = await ingerirPostulacion(config, datos, archivo instanceof File
+      ? { bytes: Buffer.from(await archivo.arrayBuffer()), mime: archivo.type, nombre: archivo.name } : undefined);
     return Response.json(result, { status: result.creada ? 201 : 200, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof ErrorPostulacion) return apiError(error.status, error.code, error.message);
