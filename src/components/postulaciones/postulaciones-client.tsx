@@ -122,7 +122,8 @@ function DetallePostulacion({ ficha: p, alActualizar, alCambiar, alRecargar }: {
   const [error, setError] = useState(""); const [guardando, setGuardando] = useState(false); const [subiendo, setSubiendo] = useState(false);
   const sucia = etapa !== p.etapa || notas !== p.notas;
   useEffect(() => { alCambiar(sucia); }, [sucia, alCambiar]);
-  const analisis = p.analisis;
+  const fallo = p.analisis?.fallo_procesamiento;
+  const analisis = fallo ? null : p.analisis;
   async function revisar(e: React.FormEvent) {
     e.preventDefault(); setGuardando(true); setError("");
     try { const result = await solicitar<{ postulacion: PostulacionFicha }>(`/api/postulaciones/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version: p.version, etapa, notas }) }); alActualizar(result.postulacion); }
@@ -138,6 +139,11 @@ function DetallePostulacion({ ficha: p, alActualizar, alCambiar, alRecargar }: {
     {error && <Aviso>{error} <button className="underline" onClick={alRecargar}>Recargar ficha</button></Aviso>}
     <section className="rounded-lg border p-4"><h3 className="flex items-center gap-2 font-semibold"><FileText className="h-4 w-4" />Currículum</h3>{p.cv ? <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><div><p className="break-all text-sm">{p.cv.nombre}</p><p className="mt-1 text-xs text-muted-foreground">PDF · {Math.ceil(p.cv.bytes / 1024)} KB · Archivo privado</p></div><a href={p.cv.url} className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><FileDown className="h-4 w-4" />Descargar CV</a></div> : <form className="mt-3 space-y-3" onSubmit={subir}><label className="block text-sm text-muted-foreground">Adjuntar PDF de hasta 10 MB<Input name="archivo" type="file" accept="application/pdf,.pdf" required className="mt-2" disabled={subiendo || sucia} /></label>{sucia && <p className="text-xs text-muted-foreground">Guarda tus cambios antes de adjuntar el archivo.</p>}<Button type="submit" variant="outline" size="sm" disabled={subiendo || sucia}><Upload className="mr-2 h-4 w-4" />{subiendo ? 'Subiendo…' : 'Guardar CV'}</Button></form>}</section>
     {analisis?.rubrica_catalogo && <p className="text-sm text-muted-foreground">Rúbrica {analisis.rubrica_catalogo.codigo} · versión {analisis.rubrica_catalogo.version}</p>}
+    {fallo && <p className="rounded-md border p-3 text-sm">{{
+      lectura_cv: "No se pudo extraer texto legible del CV. Abre el adjunto para revisarlo.",
+      analisis_ia: "El análisis automático quedó pendiente. Puedes revisar el CV o volver a procesarlo.",
+      catalogo: "No se pudo consultar el catálogo de vacantes. Puedes volver a procesar el CV.",
+    }[fallo]}</p>}
     {!!analisis?.vacantes_sugeridas?.length && <section>
       <h3 className="font-semibold">Vacantes sugeridas para revisión</h3>
       <ul className="mt-2 space-y-2">

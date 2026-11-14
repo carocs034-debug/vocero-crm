@@ -67,14 +67,18 @@ it("guarda un PDF sin vacante en Por completar y sin análisis de Almacenista", 
     vacante: "Por confirmar", etapa: "por_completar", analisis: null,
   }));
 });
-it("enriquece la ficha de correo existente con sugerencias vigentes sustentadas", async () => {
+it("recupera una ficha tras un fallo de IA y guarda sugerencias vigentes sustentadas", async () => {
   const buzon = "pruebas@example.test";
   const autorizado = {...alcance, buzon};
   const base = {version: 1, canal: "correo", buzon, mensaje_id: "perfil-por-confirmar",
     nombre: "Persona sintética", vacante_indicada: false};
-  const primera = await ingerirPostulacion(autorizado, datosIngestaSchema.parse(base), archivo);
+  const fallo = datosIngestaSchema.parse({...base, fallo_procesamiento: "analisis_ia"});
+  const primera = await ingerirPostulacion(autorizado, fallo, archivo);
+  expect(sim.insertar.mock.calls[0]?.[0].analisis).toMatchObject({fallo_procesamiento: "analisis_ia"});
   sim.filas = [{...sim.insertar.mock.calls[0]?.[0], cvStorageId: "ma_1", revisionHumana: "pendiente", version: 1}];
   sim.leer.mockResolvedValue(archivo.bytes);
+  await expect(ingerirPostulacion(autorizado, fallo, archivo)).resolves.toMatchObject({creada: false, id: primera.id});
+  expect(sim.actualizar).not.toHaveBeenCalled();
   const evidencia = "Preparé pedidos e hice inventarios semanales.";
   sim.puestos = [
     {organizationId: alcance.org, codigo: "ALM", nombre: "Almacén", activa: true},
@@ -94,6 +98,7 @@ it("enriquece la ficha de correo existente con sugerencias vigentes sustentadas"
       vacantes_sugeridas: [{codigo: "ALM", nombre: "Almacén", evidencia}],
     }),
   }), [alcance.org, primera.id, 1]);
+  expect(sim.actualizar.mock.calls[0]?.[0].analisis).not.toHaveProperty("fallo_procesamiento");
   expect(sim.guardar).toHaveBeenCalledTimes(1);
 });
 it.each([

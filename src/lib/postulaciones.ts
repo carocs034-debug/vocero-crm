@@ -30,6 +30,7 @@ export const analisisPostulacionSchema = z.object({
   if (value.cobertura < 0.7 && value.score !== null) ctx.addIssue({ code: "custom", message: "Cobertura insuficiente para una calificación" });
 });
 export type AnalisisPostulacion = z.infer<typeof analisisPostulacionSchema> & {
+  fallo_procesamiento?: "lectura_cv" | "analisis_ia" | "catalogo";
   rubrica_catalogo?: { codigo: string; version: number };
   vacantes_sugeridas?: { codigo: string; nombre: string; evidencia: string }[];
 };

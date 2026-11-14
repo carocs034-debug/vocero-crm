@@ -91,7 +91,10 @@
         "batching": {}
       },
       "id": "nodo-07",
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "name": "OpenRouter - configurar credencial",
@@ -189,7 +192,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "const resultado = $input.first().json;\nconst origen = $('Validar archivo de prueba').all(0, 0)[0];\nconst datos = {version:1,canal:'correo',buzon:'contacto@talentedmx.com',mensaje_id:origen.json.mensaje_id,nombre:origen.json.nombre,vacante_indicada:false};\nif (resultado.perfil) datos.perfil = resultado.perfil;\nif (resultado.decision_humana === 'pendiente') {\n  const preparado = $('Preparar CV y rubrica').all(0, 0)[0]?.json;\n  if (!preparado?.rubrica_catalogo) throw new Error('Falta la rúbrica del análisis validado');\n  const {resumen_profesional, cobertura, score, requisitos_pendientes, alertas_documentales} = resultado;\n  const criterios = resultado.criterios.map(({id,estado,evidencia,explicacion}) => ({id,estado,evidencia,explicacion}));\n  Object.assign(datos,{vacante_indicada:true,rubrica_catalogo:preparado.rubrica_catalogo,texto_extraido:preparado.texto_analisis,analisis:{resumen_profesional,criterios,cobertura,score,requisitos_pendientes,alertas_documentales}});\n}\nreturn [{json:{datos:JSON.stringify(datos)},binary:{data:origen.binary.data}}];"
+        "jsCode": "const resultado = $input.first().json;\nconst origen = $('Validar archivo de prueba').all(0, 0)[0];\nconst datos = {version:1,canal:'correo',buzon:'contacto@talentedmx.com',mensaje_id:origen.json.mensaje_id,nombre:origen.json.nombre,vacante_indicada:false};\nif (resultado.fallo_procesamiento) datos.fallo_procesamiento = resultado.fallo_procesamiento;\nif (resultado.perfil) datos.perfil = resultado.perfil;\nif (resultado.decision_humana === 'pendiente') {\n  const preparado = $('Preparar CV y rubrica').all(0, 0)[0]?.json;\n  if (!preparado?.rubrica_catalogo) throw new Error('Falta la rúbrica del análisis validado');\n  const {resumen_profesional, cobertura, score, requisitos_pendientes, alertas_documentales} = resultado;\n  const criterios = resultado.criterios.map(({id,estado,evidencia,explicacion}) => ({id,estado,evidencia,explicacion}));\n  Object.assign(datos,{vacante_indicada:true,rubrica_catalogo:preparado.rubrica_catalogo,texto_extraido:preparado.texto_analisis,analisis:{resumen_profesional,criterios,cobertura,score,requisitos_pendientes,alertas_documentales}});\n}\nreturn [{json:{datos:JSON.stringify(datos)},binary:{data:origen.binary.data}}];"
       },
       "position": [
         2400,
@@ -250,20 +253,6 @@
       "onError": "continueErrorOutput"
     },
     {
-      "name": "Conservar PDF para revisión",
-      "id": "correo-conservar-pdf",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1680,
-        300
-      ],
-      "parameters": {
-        "jsCode": "return [{ json: { revision_pendiente: true } }];"
-      },
-      "notes": "Si falla la lectura, el catálogo o la evaluación, el paso de registro recupera el PDF original y lo guarda en Por completar."
-    },
-    {
       "id": "ocr-pdf",
       "name": "Leer PDF escaneado con OCR",
       "type": "n8n-nodes-base.httpRequest",
@@ -296,7 +285,10 @@
             }
           ]
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "id": "ocr-adjunto",
@@ -387,7 +379,10 @@
         "batching": {}
       },
       "id": "correo-perfil-ia",
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "name": "Validar perfil de correo",
@@ -402,6 +397,48 @@
         "jsCode": "const salida = String($input.first().json.text ?? '').trim();\nconst perfil = JSON.parse(salida.replace(/^\\x60{3}(?:json)?\\s*|\\s*\\x60{3}$/gi,''));\nif (typeof perfil.resumen_profesional !== 'string' || !perfil.resumen_profesional.trim() ||\n    !Array.isArray(perfil.sugerencias)) throw new Error('Respuesta de perfil inválida');\nconst {cv,fragmentos} = $('Preparar perfil sin vacante').first().json;\nconst sugerencias = perfil.sugerencias.filter(s => s && typeof s.codigo === 'string' &&\n  /^[A-Z0-9-]{2,24}$/.test(s.codigo) && Number.isInteger(s.fragmento) && fragmentos[s.fragmento])\n  .slice(0,3).map(({codigo,fragmento}) => ({codigo,evidencia:fragmentos[fragmento]}));\nreturn [{json:{perfil:{resumen_profesional:perfil.resumen_profesional.trim().slice(0,6000),\n  texto_extraido:cv,sugerencias}}}];"
       },
       "onError": "continueErrorOutput"
+    },
+    {
+      "name": "Registrar fallo de lectura",
+      "id": "correo-fallo-lectura_cv",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2280,
+        360
+      ],
+      "parameters": {
+        "jsCode": "return [{json:{fallo_procesamiento:\"lectura_cv\"}}];"
+      },
+      "notes": "Si falla la lectura, el catálogo o la evaluación, el paso de registro recupera el PDF original y lo guarda en Por completar."
+    },
+    {
+      "name": "Registrar fallo de catálogo",
+      "id": "correo-fallo-catalogo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2280,
+        520
+      ],
+      "parameters": {
+        "jsCode": "return [{json:{fallo_procesamiento:\"catalogo\"}}];"
+      },
+      "notes": "Si falla la lectura, el catálogo o la evaluación, el paso de registro recupera el PDF original y lo guarda en Por completar."
+    },
+    {
+      "name": "Registrar fallo de análisis",
+      "id": "correo-fallo-analisis_ia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2280,
+        680
+      ],
+      "parameters": {
+        "jsCode": "return [{json:{fallo_procesamiento:\"analisis_ia\"}}];"
+      },
+      "notes": "Si falla la lectura, el catálogo o la evaluación, el paso de registro recupera el PDF original y lo guarda en Por completar."
     }
   ],
   "connections": {
@@ -454,7 +491,7 @@
         ],
         [
           {
-            "node": "Conservar PDF para revisión",
+            "node": "Registrar fallo de catálogo",
             "type": "main",
             "index": 0
           }
@@ -526,7 +563,7 @@
         ],
         [
           {
-            "node": "Conservar PDF para revisión",
+            "node": "Registrar fallo de análisis",
             "type": "main",
             "index": 0
           }
@@ -544,7 +581,7 @@
         ],
         [
           {
-            "node": "Conservar PDF para revisión",
+            "node": "Registrar fallo de análisis",
             "type": "main",
             "index": 0
           }
@@ -562,7 +599,7 @@
         ],
         [
           {
-            "node": "Conservar PDF para revisión",
+            "node": "Registrar fallo de análisis",
             "type": "main",
             "index": 0
           }
@@ -591,18 +628,7 @@
         ],
         [
           {
-            "node": "Conservar PDF para revisión",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Conservar PDF para revisión": {
-      "main": [
-        [
-          {
-            "node": "Preparar registro de correo",
+            "node": "Registrar fallo de catálogo",
             "type": "main",
             "index": 0
           }
@@ -620,7 +646,7 @@
         ],
         [
           {
-            "node": "Conservar PDF para revisión",
+            "node": "Registrar fallo de lectura",
             "type": "main",
             "index": 0
           }
@@ -638,7 +664,7 @@
         ],
         [
           {
-            "node": "Conservar PDF para revisión",
+            "node": "Registrar fallo de lectura",
             "type": "main",
             "index": 0
           }
@@ -656,7 +682,7 @@
         ],
         [
           {
-            "node": "Conservar PDF para revisión",
+            "node": "Registrar fallo de lectura",
             "type": "main",
             "index": 0
           }
@@ -692,7 +718,7 @@
         ],
         [
           {
-            "node": "Preparar registro de correo",
+            "node": "Registrar fallo de análisis",
             "type": "main",
             "index": 0
           }
@@ -710,7 +736,7 @@
         ],
         [
           {
-            "node": "Preparar registro de correo",
+            "node": "Registrar fallo de análisis",
             "type": "main",
             "index": 0
           }
@@ -726,6 +752,39 @@
             "index": 0
           }
         ],
+        [
+          {
+            "node": "Registrar fallo de análisis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar fallo de lectura": {
+      "main": [
+        [
+          {
+            "node": "Preparar registro de correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar fallo de catálogo": {
+      "main": [
+        [
+          {
+            "node": "Preparar registro de correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar fallo de análisis": {
+      "main": [
         [
           {
             "node": "Preparar registro de correo",

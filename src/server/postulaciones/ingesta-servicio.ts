@@ -24,20 +24,31 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
       const [previa] = await tx.select().from(tabla).where(scoped(tabla.organizationId, alcance.org, eq(tabla.claveExterna, clave))).limit(1);
       const vacantePendiente = datos.vacante_indicada === false;
       const perfil = "perfil" in datos ? datos.perfil : undefined;
+      const fallo = "fallo_procesamiento" in datos ? datos.fallo_procesamiento : undefined;
       const puedeCompletar = previa?.canal === "correo" && previa.vacante === "Por confirmar" &&
         previa.etapa === "por_completar" && previa.revisionHumana === "pendiente";
       if (previa) {
         if (!previa.cvStorageId) throw new ErrorPostulacion(409, "ingesta_incompleta", "El mensaje requiere revisión del operador");
         const guardado = await leerMedia(alcance.org, previa.cvStorageId);
         if (!guardado.equals(archivo.bytes)) throw new ErrorPostulacion(409, "mensaje_con_otro_pdf", "El mensaje ya fue recibido con otro PDF");
-        if (!puedeCompletar || (vacantePendiente
-          ? !perfil || (previa.analisis !== null && !(previa.analisis.vacantes_sugeridas?.length === 0 && perfil.sugerencias.length))
-          : !esCorreo || (previa.analisis !== null && !previa.analisis.vacantes_sugeridas))) {
+        const anterior = previa.analisis;
+        const sinAnalisis = anterior === null || Boolean(anterior.fallo_procesamiento);
+        const agregarPerfil = perfil && (sinAnalisis ||
+          (anterior?.vacantes_sugeridas?.length === 0 && perfil.sugerencias.length > 0));
+        const registrarFallo = fallo && sinAnalisis && anterior?.fallo_procesamiento !== fallo;
+        const confirmarVacante = esCorreo && (sinAnalisis || Boolean(anterior?.vacantes_sugeridas));
+        if (!puedeCompletar || !(vacantePendiente ? agregarPerfil || registrarFallo : confirmarVacante)) {
           return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
         }
       }
       let vacante = vacantePendiente ? "Por confirmar" : alcance.vacante;
       let analisis: AnalisisPostulacion | null = vacantePendiente ? null : datos.analisis;
+      if (fallo) {
+        analisis = {
+          fallo_procesamiento: fallo, resumen_profesional: "", criterios: [], cobertura: 0,
+          score: null, requisitos_pendientes: [], alertas_documentales: [],
+        };
+      }
       if (perfil) {
         const normalizar = (texto: string) => texto.normalize("NFC").replace(/\s+/g, " ").trim();
         const texto = normalizar(perfil.texto_extraido);
@@ -56,7 +67,7 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
             return evidencia ? [{ ...v, evidencia }] : [];
           }),
         };
-        if (previa?.analisis && !analisis.vacantes_sugeridas?.length) {
+        if (previa?.analisis?.vacantes_sugeridas && !analisis.vacantes_sugeridas?.length) {
           return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
         }
       }
