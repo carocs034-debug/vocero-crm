@@ -8,12 +8,15 @@ vi.mock("@/lib/db", async original => ({ ...await original<typeof import("@/lib/
     execute: sim.ejecutar,
     insert: () => ({ values: sim.insertar }),
     update: () => ({ set: (valores: unknown) => ({ where: (cond: SQL) => sim.actualizar(valores, new PgDialect().sqlToQuery(cond).params) }) }),
-    select: () => ({ from: () => ({ where: (cond: SQL) => ({ limit: async () => {
+    select: (campos?: unknown) => ({ from: () => ({ where: (cond: SQL) => {
       const { sql, params } = new PgDialect().sqlToQuery(cond);
-      return sql.includes('"clave_externa"')
+      if (campos) return Promise.resolve(sim.puestos.filter(v =>
+        v.organizationId === params[0] && v.activa === params[1] && params.slice(2).includes(v.codigo))
+        .map(({codigo, nombre}) => ({codigo, nombre})));
+      return { limit: async () => sql.includes('"clave_externa"')
         ? sim.filas.filter(f => f.organizationId === params[0] && f.claveExterna === params[1])
-        : sim.puestos.filter(v => v.organizationId === params[0] && v.codigo === params[1] && v.activa === params[2]);
-    } }) }) }),
+        : sim.puestos.filter(v => v.organizationId === params[0] && v.codigo === params[1] && v.activa === params[2]) };
+    } }) }),
   });
   if (sim.commitFalla) throw new Error("Respuesta COMMIT perdida"); return resultado;
 } }) }));
@@ -63,6 +66,35 @@ it("guarda un PDF sin vacante en Por completar y sin análisis de Almacenista", 
   expect(sim.insertar).toHaveBeenCalledWith(expect.objectContaining({
     vacante: "Por confirmar", etapa: "por_completar", analisis: null,
   }));
+});
+it("enriquece la ficha de correo existente con sugerencias vigentes sustentadas", async () => {
+  const buzon = "pruebas@example.test";
+  const autorizado = {...alcance, buzon};
+  const base = {version: 1, canal: "correo", buzon, mensaje_id: "perfil-por-confirmar",
+    nombre: "Persona sintética", vacante_indicada: false};
+  const primera = await ingerirPostulacion(autorizado, datosIngestaSchema.parse(base), archivo);
+  sim.filas = [{...sim.insertar.mock.calls[0]?.[0], cvStorageId: "ma_1", revisionHumana: "pendiente", version: 1}];
+  sim.leer.mockResolvedValue(archivo.bytes);
+  const evidencia = "Preparé pedidos e hice inventarios semanales.";
+  sim.puestos = [
+    {organizationId: alcance.org, codigo: "ALM", nombre: "Almacén", activa: true},
+    {organizationId: alcance.org, codigo: "BAJA", nombre: "Cerrada", activa: false},
+    {organizationId: alcance.org, codigo: "CAJA", nombre: "Caja", activa: true},
+  ];
+  const perfil = {resumen_profesional: "Experiencia declarada en inventarios.",
+    texto_extraido: evidencia.repeat(10), sugerencias: [
+      {codigo: "ALM", evidencia}, {codigo: "BAJA", evidencia},
+      {codigo: "CAJA", evidencia: "Atendí clientes en ventanilla."},
+    ]};
+  await expect(ingerirPostulacion(autorizado, datosIngestaSchema.parse({...base, perfil}), archivo))
+    .resolves.toMatchObject({creada: false, id: primera.id});
+  expect(sim.actualizar).toHaveBeenCalledWith(expect.objectContaining({
+    etapa: "por_completar", vacante: "Por confirmar", analisis: expect.objectContaining({
+      resumen_profesional: perfil.resumen_profesional, score: null,
+      vacantes_sugeridas: [{codigo: "ALM", nombre: "Almacén", evidencia}],
+    }),
+  }), [alcance.org, primera.id, 1]);
+  expect(sim.guardar).toHaveBeenCalledTimes(1);
 });
 it.each([
   ["image/png", "png", "89504e470d0a1a0a"],

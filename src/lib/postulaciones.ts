@@ -31,6 +31,7 @@ export const analisisPostulacionSchema = z.object({
 });
 export type AnalisisPostulacion = z.infer<typeof analisisPostulacionSchema> & {
   rubrica_catalogo?: { codigo: string; version: number };
+  vacantes_sugeridas?: { codigo: string; nombre: string; evidencia: string }[];
 };
 const opcional = (max: number) => z.string().trim().max(max).optional().transform(v => v || null);
 export const crearPostulacionSchema = z.object({

@@ -24,7 +24,17 @@ export const datosIngestaSchema = z.union([
     rubrica_catalogo: referenciaRubrica.optional(),
     texto_extraido: z.string().min(300).max(60000), analisis: analisisPostulacionSchema,
   }).strict(),
-  datosCorreoSchema.extend({ vacante_indicada: z.literal(false) }).strict(),
+  datosCorreoSchema.extend({
+    vacante_indicada: z.literal(false),
+    perfil: z.object({
+      resumen_profesional: z.string().trim().min(1).max(6000),
+      texto_extraido: z.string().min(300).max(60000),
+      sugerencias: z.array(z.object({
+        codigo: referenciaRubrica.shape.codigo,
+        evidencia: z.string().trim().min(20).max(350),
+      }).strict()).max(3),
+    }).strict().optional(),
+  }).strict(),
   datosCorreoSchema.extend({
     vacante_indicada: z.literal(true),
     rubrica_catalogo: referenciaRubrica,

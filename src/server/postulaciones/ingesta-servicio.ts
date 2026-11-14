@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
 import { newId } from "@/lib/db/ids";
@@ -23,17 +23,40 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${JSON.stringify([alcance.org, clave])}, 0))`);
       const [previa] = await tx.select().from(tabla).where(scoped(tabla.organizationId, alcance.org, eq(tabla.claveExterna, clave))).limit(1);
       const vacantePendiente = datos.vacante_indicada === false;
+      const perfil = "perfil" in datos ? datos.perfil : undefined;
+      const puedeCompletar = previa?.canal === "correo" && previa.vacante === "Por confirmar" &&
+        previa.etapa === "por_completar" && previa.revisionHumana === "pendiente";
       if (previa) {
         if (!previa.cvStorageId) throw new ErrorPostulacion(409, "ingesta_incompleta", "El mensaje requiere revisión del operador");
         const guardado = await leerMedia(alcance.org, previa.cvStorageId);
         if (!guardado.equals(archivo.bytes)) throw new ErrorPostulacion(409, "mensaje_con_otro_pdf", "El mensaje ya fue recibido con otro PDF");
-        if (!esCorreo || vacantePendiente || previa.canal !== "correo" || previa.vacante !== "Por confirmar" ||
-            previa.etapa !== "por_completar" || previa.revisionHumana !== "pendiente" || previa.analisis !== null) {
+        if (!puedeCompletar || (vacantePendiente
+          ? !perfil || previa.analisis !== null
+          : !esCorreo || (previa.analisis !== null && !previa.analisis.vacantes_sugeridas))) {
           return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
         }
       }
       let vacante = vacantePendiente ? "Por confirmar" : alcance.vacante;
       let analisis: AnalisisPostulacion | null = vacantePendiente ? null : datos.analisis;
+      if (perfil) {
+        const normalizar = (texto: string) => texto.normalize("NFC").replace(/\s+/g, " ").trim();
+        const texto = normalizar(perfil.texto_extraido);
+        const citas = new Map(perfil.sugerencias
+          .filter(s => texto.includes(normalizar(s.evidencia)))
+          .map(s => [s.codigo, s.evidencia]));
+        const catalogo = schema.vacanteReclutamiento;
+        const vigentes = citas.size ? await tx.select({ codigo: catalogo.codigo, nombre: catalogo.nombre })
+          .from(catalogo).where(scoped(catalogo.organizationId, alcance.org,
+            eq(catalogo.activa, true), inArray(catalogo.codigo, [...citas.keys()]))) : [];
+        analisis = {
+          resumen_profesional: perfil.resumen_profesional,
+          criterios: [], cobertura: 0, score: null, requisitos_pendientes: [], alertas_documentales: [],
+          vacantes_sugeridas: vigentes.flatMap(v => {
+            const evidencia = citas.get(v.codigo);
+            return evidencia ? [{ ...v, evidencia }] : [];
+          }),
+        };
+      }
       if (!vacantePendiente && datos.rubrica_catalogo) {
         const referencia = datos.rubrica_catalogo;
         const catalogo = schema.vacanteReclutamiento;
@@ -50,7 +73,7 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
       }
       if (previa) {
         await tx.update(tabla).set({
-          vacante, analisis, etapa: "nueva", actualizadaEn: new Date(),
+          vacante, analisis, etapa: vacantePendiente ? previa.etapa : "nueva", actualizadaEn: new Date(),
           version: sql`${tabla.version} + 1`,
         }).where(scoped(tabla.organizationId, alcance.org, eq(tabla.id, previa.id), eq(tabla.version, previa.version)));
         return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
