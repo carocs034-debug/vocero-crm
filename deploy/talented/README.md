@@ -38,3 +38,11 @@ El usuario autorizo HTTPS con acceso temporal protegido. Se genero una clave ale
 El usuario completo el registro en Chrome. La base de desarrollo confirma una organizacion, un miembro con rol owner y una sesion. Se probo POST /api/auth/sign-up/email con cuerpo vacio y autenticacion temporal: devolvio HTTP 403 con el mensaje de registro cerrado. ALLOW_SIGNUP_TRUE=false. El administrador esta creado y el registro publico cerrado; no se crearon cuentas de prueba adicionales. Mantener la proteccion temporal mientras se desarrolla; retirarla requiere una decision explicita. El codigo, las plantillas saneadas y el manual publico estan respaldados en la rama chore/talented-entorno-desarrollo. Las bases y secretos se respaldan por separado fuera de Git.
 
 La clave de la puerta temporal no tiene vencimiento automatico: temporal describe su uso durante el desarrollo. Su rotacion o retirada debe registrarse cuando se decida. No compartirla por el chat ni incluirla en exportaciones del proyecto. Esta puerta tambien se aplica a la API publica del entorno; cualquier futura integracion de n8n con esta copia debera considerar ambas capas de autenticacion antes de probarse.
+# OCR opcional de desarrollo
+
+El archivo `ocr.yml` levanta un servicio de lectura con Poppler y Tesseract en español e inglés. Usa una red interna separada, sin publicar puertos. Para el piloto, conecta únicamente el contenedor que ejecuta n8n a `talented-desarrollo_ocr_privada`.
+
+Desde la raíz, ejecutar `docker compose -f deploy/talented/ocr.yml -p talented-ocr-dev up -d --build`. El destino desde la red privada es `POST http://ocr:8080/ocr`. Enviar los bytes como cuerpo e indicar `Content-Type` según el archivo. La respuesta válida contiene `text`. Los límites del piloto son 10 MiB y cinco páginas. Los temporales se eliminan al terminar y el servicio no registra el contenido.
+
+Importar el borrador de correo con OCR como flujo manual separado. Los PDF con texto siguen el recorrido normal. Si falta texto o falla la extracción, se recupera el adjunto original para OCR. Si tampoco se obtiene texto utilizable, el flujo conserva el PDF en **Por completar**. El servicio lee JPEG y PNG, y queda pendiente incorporarlos al guardado de adjuntos del CRM.
+

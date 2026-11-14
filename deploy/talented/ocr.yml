@@ -1,0 +1,21 @@
+services:
+  ocr:
+    build: ./ocr
+    networks:
+      - ocr_privada
+    read_only: true
+    tmpfs:
+      - /tmp:size=96m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 32
+    environment:
+      OMP_THREAD_LIMIT: "1"
+networks:
+  ocr_privada:
+    name: talented-desarrollo_ocr_privada
+    internal: true
