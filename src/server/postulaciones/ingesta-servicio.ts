@@ -31,7 +31,7 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
         const guardado = await leerMedia(alcance.org, previa.cvStorageId);
         if (!guardado.equals(archivo.bytes)) throw new ErrorPostulacion(409, "mensaje_con_otro_pdf", "El mensaje ya fue recibido con otro PDF");
         if (!puedeCompletar || (vacantePendiente
-          ? !perfil || previa.analisis !== null
+          ? !perfil || (previa.analisis !== null && !(previa.analisis.vacantes_sugeridas?.length === 0 && perfil.sugerencias.length))
           : !esCorreo || (previa.analisis !== null && !previa.analisis.vacantes_sugeridas))) {
           return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
         }
@@ -56,6 +56,9 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
             return evidencia ? [{ ...v, evidencia }] : [];
           }),
         };
+        if (previa?.analisis && !analisis.vacantes_sugeridas?.length) {
+          return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
+        }
       }
       if (!vacantePendiente && datos.rubrica_catalogo) {
         const referencia = datos.rubrica_catalogo;
