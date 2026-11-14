@@ -1,10 +1,20 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
-const sim = vi.hoisted(() => ({ guardar: vi.fn(), leer: vi.fn(), borrar: vi.fn(), insertar: vi.fn(), ejecutar: vi.fn(), filas: [] as Record<string,unknown>[], commitFalla: false }));
+const sim = vi.hoisted(() => ({ guardar: vi.fn(), leer: vi.fn(), borrar: vi.fn(), insertar: vi.fn(), actualizar: vi.fn(), ejecutar: vi.fn(), filas: [] as Record<string,unknown>[], puestos: [] as Record<string,unknown>[], commitFalla: false }));
 vi.mock("@/lib/storage/medios", () => ({ guardarMedia: sim.guardar, leerMedia: sim.leer, borrarMedia: sim.borrar }));
 vi.mock("@/lib/db", async original => ({ ...await original<typeof import("@/lib/db")>(), getDb: () => ({ transaction: async (cb: (t: unknown) => Promise<unknown>) => {
-  const resultado = await cb({ execute: sim.ejecutar, insert: () => ({ values: sim.insertar }), select: () => ({ from: () => ({ where: (cond: SQL) => ({ limit: async () => { const {params}=new PgDialect().sqlToQuery(cond); return sim.filas.filter(f=>f.organizationId===params[0] && f.claveExterna===params[1]); } }) }) }) });
+  const resultado = await cb({
+    execute: sim.ejecutar,
+    insert: () => ({ values: sim.insertar }),
+    update: () => ({ set: (valores: unknown) => ({ where: (cond: SQL) => sim.actualizar(valores, new PgDialect().sqlToQuery(cond).params) }) }),
+    select: () => ({ from: () => ({ where: (cond: SQL) => ({ limit: async () => {
+      const { sql, params } = new PgDialect().sqlToQuery(cond);
+      return sql.includes('"clave_externa"')
+        ? sim.filas.filter(f => f.organizationId === params[0] && f.claveExterna === params[1])
+        : sim.puestos.filter(v => v.organizationId === params[0] && v.codigo === params[1] && v.activa === params[2]);
+    } }) }) }),
+  });
   if (sim.commitFalla) throw new Error("Respuesta COMMIT perdida"); return resultado;
 } }) }));
 import { ingerirPostulacion } from "@/server/postulaciones/ingesta-servicio";
@@ -12,7 +22,7 @@ import { datosIngestaSchema } from "@/server/postulaciones/ingesta-contrato";
 const alcance = { org: "org_a", cuenta: "cuenta", conversacion: "hilo", vacante: "Almacenista" };
 const datos = datosIngestaSchema.parse({ version:1,cuenta_id:"cuenta",conversacion_id:"hilo",mensaje_id:"mensaje",nombre:"Persona sintetica",texto_extraido:"Texto sintetico sin datos reales. ".repeat(20),analisis:{resumen_profesional:"Sin evidencia suficiente",criterios:[],cobertura:0,score:null,requisitos_pendientes:[],alertas_documentales:[]} });
 const archivo = { bytes: Buffer.from("%PDF-1.4\n%%EOF"), mime:"application/pdf", nombre:"cv.pdf" };
-beforeEach(()=> { vi.clearAllMocks(); sim.filas=[];sim.commitFalla=false;sim.guardar.mockResolvedValue(undefined);sim.insertar.mockResolvedValue(undefined);sim.borrar.mockResolvedValue(undefined); });
+beforeEach(()=> { vi.clearAllMocks(); sim.filas=[];sim.puestos=[];sim.commitFalla=false;sim.guardar.mockResolvedValue(undefined);sim.insertar.mockResolvedValue(undefined);sim.borrar.mockResolvedValue(undefined); });
 it("un fallo de insercion revierte solo el archivo nuevo", async()=> {
   sim.insertar.mockRejectedValue(new Error("FK invalida"));
   await expect(ingerirPostulacion(alcance,datos,archivo)).rejects.toThrow("FK invalida");
@@ -53,6 +63,31 @@ it("guarda un PDF sin vacante en Por completar y sin análisis de Almacenista", 
   expect(sim.insertar).toHaveBeenCalledWith(expect.objectContaining({
     vacante: "Por confirmar", etapa: "por_completar", analisis: null,
   }));
+});
+it.each(["pendiente", "revisada"])("reprocesa el mismo correo con ficha %s", async revisionHumana => {
+  const base = {version: 1, canal: "correo", buzon: "pruebas@example.test",
+    mensaje_id: "<prueba@example.test>", nombre: "Persona sintética"};
+  const autorizado = {...alcance, buzon: base.buzon};
+  const primera = await ingerirPostulacion(autorizado, datosIngestaSchema.parse({...base, vacante_indicada: false}), archivo);
+  const fila = {...sim.insertar.mock.calls[0]?.[0], revisionHumana, version: 1};
+  sim.filas = [fila];
+  sim.puestos = [{organizationId: alcance.org, codigo: "ALM", nombre: "Auxiliar", activa: true, rubricas: [[{id: "inventario"}]]}];
+  sim.leer.mockResolvedValue(archivo.bytes);
+  const referencia = {codigo: "ALM", version: 1};
+  const analisis = {resumen_profesional: "Por validar", criterios: [{id: "inventario", estado: "desconocido", evidencia: [], explicacion: ""}],
+    cobertura: 0, score: null, requisitos_pendientes: [], alertas_documentales: []};
+  const confirmado = datosIngestaSchema.parse({...base, vacante_indicada: true, rubrica_catalogo: referencia,
+    texto_extraido: "Texto del CV sintético. ".repeat(20), analisis});
+  await expect(ingerirPostulacion(autorizado, confirmado, archivo)).resolves.toMatchObject({creada: false, id: primera.id});
+  if (revisionHumana === "pendiente") {
+    expect(sim.actualizar).toHaveBeenCalledWith(expect.objectContaining({
+      vacante: "Auxiliar", etapa: "nueva", analisis: {...analisis, rubrica_catalogo: referencia},
+    }), [alcance.org, primera.id, 1]);
+  } else {
+    expect(sim.actualizar).not.toHaveBeenCalled();
+  }
+  expect(sim.guardar).toHaveBeenCalledTimes(1);
+  expect(sim.insertar).toHaveBeenCalledTimes(1);
 });
 it("la insercion fija la organizacion, vacante y etapa pendiente, sin aceptar datos de otro tenant", async()=> {
   const resultado = await ingerirPostulacion(alcance,datos,archivo);

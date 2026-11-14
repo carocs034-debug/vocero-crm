@@ -21,13 +21,16 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
       await tx.execute(sql`set local lock_timeout = '5s'`);
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${JSON.stringify([alcance.org, clave])}, 0))`);
       const [previa] = await tx.select().from(tabla).where(scoped(tabla.organizationId, alcance.org, eq(tabla.claveExterna, clave))).limit(1);
+      const vacantePendiente = datos.vacante_indicada === false;
       if (previa) {
         if (!previa.cvStorageId) throw new ErrorPostulacion(409, "ingesta_incompleta", "El mensaje requiere revisión del operador");
         const guardado = await leerMedia(alcance.org, previa.cvStorageId);
         if (!guardado.equals(archivo.bytes)) throw new ErrorPostulacion(409, "mensaje_con_otro_pdf", "El mensaje ya fue recibido con otro PDF");
-        return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
+        if (!esCorreo || vacantePendiente || previa.canal !== "correo" || previa.vacante !== "Por confirmar" ||
+            previa.etapa !== "por_completar" || previa.revisionHumana !== "pendiente" || previa.analisis !== null) {
+          return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
+        }
       }
-      const vacantePendiente = datos.vacante_indicada === false;
       let vacante = vacantePendiente ? "Por confirmar" : alcance.vacante;
       let analisis: AnalisisPostulacion | null = vacantePendiente ? null : datos.analisis;
       if (!vacantePendiente && datos.rubrica_catalogo) {
@@ -43,6 +46,13 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
         }
         vacante = puesto.nombre;
         analisis = { ...datos.analisis, rubrica_catalogo: referencia };
+      }
+      if (previa) {
+        await tx.update(tabla).set({
+          vacante, analisis, etapa: "nueva", actualizadaEn: new Date(),
+          version: sql`${tabla.version} + 1`,
+        }).where(scoped(tabla.organizationId, alcance.org, eq(tabla.id, previa.id), eq(tabla.version, previa.version)));
+        return { creada: false, id: previa.id, url_ficha: `/postulaciones?id=${previa.id}` };
       }
       const id = newId("postulacion"), storageId = newId("mediaAsset");
       // Limpiar tambien un archivo parcialmente escrito si falla la operacion.
