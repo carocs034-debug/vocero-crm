@@ -24,8 +24,8 @@ export type MensajeDelEvento = {
   type: string;
   text: string | null;
   /**
-   * El id que acepta `GET /api/bot/media/{mediaId}` (el de Graph), no el id
-   * interno del adjunto. En cloud es al revés porque allá la vuelta es
+   * La referencia que acepta `GET /api/bot/media/{mediaId}`: un id de Graph
+   * o una referencia `archivo.<id>` a un PDF guardado. En cloud la vuelta es
    * `/api/brains/media`; aquí la vuelta es `/api/bot/*` y no cambia.
    */
   mediaId: string | null;

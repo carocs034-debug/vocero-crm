@@ -26,3 +26,13 @@ La preparacion del texto retira el encabezado de un formato especifico, no anoni
 El piloto no tiene HMAC, cola/idempotencia persistentes, retencion documental ni analisis antimalware. Verifica formato y tamano despues de descargar; los PDFs escaneados requieren otra ruta con OCR. Antes de uso real deben completarse esos controles y probar manejo de errores y aislamiento.
 
 La variante CRM agrega idempotencia durable del resultado aceptado por cuenta/mensaje en Postgres y almacenamiento privado, no una cola durable de recepcion ni HMAC en Zernio. Una repeticion conserva el primer resultado y no sobrescribe revision humana. Cambiar el PDF del mismo mensaje devuelve conflicto. Sigue limitada a CV ficticio, cuenta y conversacion fijadas en el servidor. Un mensaje nuevo con el mismo CV tiene otra identidad; no deduplica personas por nombre o telefono.
+# Piloto de CV por Messenger
+
+Importar `messenger-pdf-piloto.json` como workflow inactivo. Vincular las credenciales en n8n antes de publicar.
+
+- **Recibir referencia de Messenger** usa Header Auth con nombre `X-Talented-Messenger-Key` y una clave exclusiva para este webhook.
+- **Consultar selección en el chat**, **Consultar rúbrica vigente** y **Guardar en Postulaciones** usan la credencial de ingesta del CRM. **Leer PDF guardado en CRM** usa la credencial del agente por `Authorization: Bearer`. **Analizar evidencia con IA** usa el nodo de modelo con la credencial de OpenRouter.
+- En el CRM, configurar `RECLUTAMIENTO_INGESTA_MESSENGER_CONVERSACION` con el ID interno `cv_…` del chat de prueba. Configurar `RECLUTAMIENTO_MESSENGER_N8N_URL` con la URL HTTPS del webhook publicado y `RECLUTAMIENTO_MESSENGER_N8N_KEY` con la misma credencial de recepción. Guardar las claves en el entorno privado del VPS.
+- En el chat autorizado, indicar una vacante activa y enviar dos PDF ficticios por separado. Revisar en Postulaciones que aparezca una ficha por mensaje con el archivo, la vacante y los criterios. Las fichas del piloto se titulan «CV de Messenger».
+
+Si la vacante es ambigua o el PDF no se lee, el flujo piloto se detiene. El PDF disponible permanece en la Bandeja. El aviso a n8n aún no tiene reintento persistente.

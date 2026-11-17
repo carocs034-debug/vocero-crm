@@ -41,6 +41,7 @@ export type MessengerInbound = {
   profileName: string | null;
   /** Hilo en la plataforma de origen: hace falta para responder por Zernio. */
   threadRef: string | null;
+  documentoUrl?: string;
 };
 
 type MetaPagePayload = {
@@ -69,10 +70,8 @@ type MetaPagePayload = {
 };
 
 /**
- * Tipos de adjunto → tipo de mensaje del CRM. En la v1 el adjunto no se
- * descarga (ambas fuentes lo entregan como URL temporal, no como id de media):
- * el mensaje entra con su tipo para que la bandeja enseñe "📎 Imagen" en vez
- * de perder el mensaje, y el operador sepa que hay algo que ver.
+ * Tipos de adjunto → tipo de mensaje del CRM. Los PDF de Zernio se recuperan
+ * mediante su URL temporal y los demás adjuntos conservan el tipo en Bandeja.
  */
 const ATTACHMENT_TYPE: Record<string, string> = {
   image: "image",
@@ -155,6 +154,7 @@ export function normalizeZernioEvent(payload: unknown): MessengerInbound[] {
       : null;
   const type = resolveType(text, evt.message?.attachments?.[0]);
   if (!type) return [];
+  const documentoUrl = evt.message?.attachments?.[0]?.url;
 
   const sender = evt.message?.sender;
   return [
@@ -164,6 +164,7 @@ export function normalizeZernioEvent(payload: unknown): MessengerInbound[] {
       messageId,
       text,
       type,
+      ...(type === "document" && typeof documentoUrl === "string" ? { documentoUrl } : {}),
       timestamp: zernioSentAtSeconds(evt.message?.sentAt),
       profileName:
         sender?.name?.trim() ||
@@ -173,6 +174,37 @@ export function normalizeZernioEvent(payload: unknown): MessengerInbound[] {
       threadRef: evt.message?.conversationId ?? null,
     },
   ];
+}
+
+const MAX_PDF_BYTES = 10 * 1024 * 1024;
+
+async function descargarPdf(urlTemporal: string): Promise<Buffer> {
+  const url = new URL(urlTemporal);
+  const cdnDeMeta = ["fbcdn.net", "fbsbx.com"].some(
+    (dominio) => url.hostname === dominio || url.hostname.endsWith("." + dominio)
+  );
+  if (url.protocol !== "https:" || url.port || url.username || url.password || !cdnDeMeta) {
+    throw new Error("Origen de adjunto no permitido");
+  }
+  const respuesta = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(10_000) });
+  if (!respuesta.ok || !respuesta.body) throw new Error("Adjunto no disponible");
+  const lector = respuesta.body.getReader();
+  const partes: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const { value, done } = await lector.read();
+      if (done) break;
+      bytes += value.length;
+      if (bytes > MAX_PDF_BYTES) throw new Error("Adjunto demasiado grande");
+      partes.push(value);
+    }
+  } finally {
+    await lector.cancel().catch(() => {});
+  }
+  const pdf = Buffer.concat(partes, bytes);
+  if (pdf.subarray(0, 5).toString("ascii") !== "%PDF-") throw new Error("Adjunto no es PDF");
+  return pdf;
 }
 
 function resolveType(
@@ -252,6 +284,7 @@ async function ingestAll(
         ? null
         : await fetchMessengerProfileName(creds, evt.psid));
 
+    const { documentoUrl } = evt;
     await ingestInboundMessage({
       organizationId: creds.organizationId,
       identity: {
@@ -268,6 +301,16 @@ async function ingestAll(
       text: evt.text,
       timestamp: evt.timestamp,
       threadRef: evt.threadRef,
+      ...(documentoUrl ? { media: {
+        kind: "document",
+        waMediaId: null,
+        mimeType: "application/pdf",
+        fileName: "Documento de Messenger.pdf",
+        caption: null,
+        payload: null,
+        fetchStatus: "pending",
+        descargar: () => descargarPdf(documentoUrl),
+      } } : {}),
     });
   }
 }

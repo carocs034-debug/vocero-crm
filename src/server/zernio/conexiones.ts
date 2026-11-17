@@ -24,6 +24,7 @@ import {
 } from "@/server/whatsapp/webhook-url";
 import { fetchZernioAccounts, type ZernioChannel } from "@/server/zernio/cuentas";
 import { columnasDelSecreto } from "@/server/zernio/secreto-guardado";
+import { configuracionWhatsAppZernio } from "@/server/whatsapp/zernio-inbound";
 import {
   cachedZernioWebhooks,
   ensureZernioWebhook,
@@ -297,6 +298,9 @@ export async function ensureWebhookForOrg(
     for (const [token, grupo] of porLlave) {
       const visibles = new Set((await fetchZernioAccounts(token)).map((a) => a._id));
       const accountIds = webhookAccountIds(conns, grupo, visibles);
+      const whatsapp = configuracionWhatsAppZernio();
+      if (whatsapp?.organizacion === organizationId && visibles.has(whatsapp.cuenta) &&
+          !accountIds.includes(whatsapp.cuenta)) accountIds.push(whatsapp.cuenta);
       const r = await ensureZernioWebhook({
         token,
         segment,

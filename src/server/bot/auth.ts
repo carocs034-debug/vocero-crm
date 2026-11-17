@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { apiError } from "@/lib/api";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
@@ -93,10 +94,13 @@ let cachedOrgId: string | null = null;
 export async function resolveInstanceOrg(): Promise<string | null> {
   if (cachedOrgId) return cachedOrgId;
   const db = getDb();
-  const rows = await db
+  const configuredOrgId = process.env.BOT_ORGANIZATION_ID?.trim();
+  const organizations = db
     .select({ id: schema.organization.id })
-    .from(schema.organization)
-    .limit(1);
+    .from(schema.organization);
+  const rows = await (configuredOrgId
+    ? organizations.where(eq(schema.organization.id, configuredOrgId)).limit(1)
+    : organizations.limit(1));
   cachedOrgId = rows[0]?.id ?? null;
   return cachedOrgId;
 }

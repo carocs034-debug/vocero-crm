@@ -4,6 +4,8 @@ import { apiError } from "@/lib/api";
 import { requireBotKey, resolveInstanceOrg } from "@/server/bot/auth";
 import { serializeBotProfile, type BotLlm } from "@/server/bot/profile";
 import { resolveAiProvider } from "@/lib/ai/provider";
+import { reclutamientoEnabled } from "@/server/postulaciones/flag";
+import { listarVacantes } from "@/server/vacantes/servicio";
 
 export const dynamic = "force-dynamic";
 
@@ -44,5 +46,17 @@ export async function GET(req: Request) {
   const ia = await resolveAiProvider(organizationId);
   const llm: BotLlm = ia.ok && ia.provider.model ? { path: "/api/bot/llm", model: ia.provider.model } : null;
 
-  return Response.json(serializeBotProfile(profile, kb, llm));
+  const respuesta = serializeBotProfile(profile, kb, llm);
+  if (reclutamientoEnabled()) {
+    const vacantes = await listarVacantes(organizationId, true);
+    const catalogo = vacantes.length
+      ? vacantes.map(({ nombre }) => `- ${nombre.replace(/\s+/g, " ")}`).join("\n")
+      : "Actualmente no hay vacantes activas.";
+    respuesta.kb = [
+      respuesta.kb,
+      `## Catálogo vigente del CRM\nUsa este listado para informar qué vacantes están abiertas y confirmar cuál le interesa a la persona.\n${catalogo}`,
+    ].filter(Boolean).join("\n\n");
+  }
+
+  return Response.json(respuesta);
 }

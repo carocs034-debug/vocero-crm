@@ -6,6 +6,7 @@ import { normalizeMx } from "@/lib/meta/client";
 import { publish } from "@/server/events/bus";
 import { getCredentialsByPhoneNumberId } from "@/server/whatsapp/credentials";
 import { ensureAssetAvailable } from "@/server/whatsapp/media";
+import { guardarMedia } from "@/lib/storage/medios";
 import type { Channel } from "@/lib/channels";
 import type {
   WebhookMediaPayload,
@@ -26,6 +27,7 @@ import { registrarAnuncioDeOrigen } from "@/server/attribution/store";
 import { onLeadActivity } from "@/server/inbox/lead-activity";
 import { despachoActivo } from "@/server/brains/config";
 import { despacharAlCerebro } from "@/server/dispatch/encolar";
+import { dispararEvaluacionMessenger } from "@/server/postulaciones/disparo-messenger";
 import {
   aCitaDto,
   citaDelWebhook,
@@ -98,6 +100,7 @@ type MediaInput = {
   caption: string | null;
   payload: unknown;
   fetchStatus: "available" | "pending";
+  descargar?: () => Promise<Buffer>;
 };
 
 /**
@@ -181,6 +184,29 @@ async function attachMediaAsset(
       .set({ mediaAssetId: asset.id })
       .where(eq(schema.message.id, messageId));
     if (asset.fetchStatus === "pending") {
+      if (media.descargar) {
+        return media.descargar()
+          .then(async (archivo) => {
+            const storagePath = await guardarMedia(
+              organizationId, asset.id, archivo, media.mimeType ?? undefined
+            );
+            const [disponible] = await db.update(schema.mediaAsset).set({
+              storagePath,
+              fileSize: archivo.length,
+              fetchStatus: "available",
+              updatedAt: new Date(),
+            }).where(scoped(schema.mediaAsset.organizationId, organizationId, eq(schema.mediaAsset.id, asset.id))).returning();
+            return disponible ?? null;
+          })
+          .catch(async () => {
+            const [fallido] = await db.update(schema.mediaAsset).set({
+              fetchStatus: "failed",
+              fetchError: "No se pudo recuperar el archivo de Messenger",
+              updatedAt: new Date(),
+            }).where(scoped(schema.mediaAsset.organizationId, organizationId, eq(schema.mediaAsset.id, asset.id))).returning();
+            return fallido ?? null;
+          });
+      }
       // Descarga in-process, sin bloquear la ingesta; on-demand reintenta.
       // 044: al terminar se avisa a la bandeja, que pintó «descargando…».
       void ensureAssetAvailable(organizationId, asset.id)
@@ -555,6 +581,10 @@ export async function ingestInboundMessage(input: {
 
   // 036 — Quien contesta es el cerebro conectado; sin él, una persona. El
   // 025: `message.id` es lo que el despacho le debe al cerebro.
+  if (contact.channel === "messenger" && asset?.fetchStatus === "available" &&
+      asset.kind === "document" && asset.mimeType === "application/pdf") {
+    await dispararEvaluacionMessenger(organizationId, conversation.id, message.id);
+  }
   if (despachoActivo()) await despacharAlCerebro(conversation.id, organizationId, message.id);
 }
 

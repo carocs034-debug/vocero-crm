@@ -70,7 +70,11 @@ function paraEvento(m: {
     text: m.text,
     media: m.assetId
       ? {
-          waMediaId: m.waMediaId,
+          waMediaId: m.waMediaId ?? (
+            m.type === "document" && m.mimeType === "application/pdf"
+              ? "archivo." + m.assetId
+              : null
+          ),
           mimeType: m.mimeType,
           caption: m.caption,
           fileName: m.fileName,

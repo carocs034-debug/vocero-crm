@@ -3,6 +3,7 @@ import { processZernioEvent } from "@/server/instagram/ingest";
 import { processZernioMessengerEvent } from "@/server/messenger/ingest";
 import { processZernioTiktokEvent, zernioPlatform } from "@/server/tiktok/ingest";
 import { webhookVerifyToken } from "@/server/whatsapp/webhook-url";
+import { configuracionWhatsAppZernio, ingerirWhatsAppZernio } from "@/server/whatsapp/zernio-inbound";
 import {
   isValidZernioSignatureAny,
   parseZernioEvent,
@@ -67,6 +68,12 @@ export async function isAuthenticZernioDelivery(
   signature: string | null
 ): Promise<boolean> {
   const evt = parseZernioEvent(rawBody);
+  if (evt && zernioPlatform(evt) === "whatsapp") {
+    const config = configuracionWhatsAppZernio();
+    if (!config || (evt.account?.id ?? evt.account?.accountId) !== config.cuenta) return true;
+    const secretos = await storedZernioSecrets(config.organizacion);
+    return secretos.length > 0 && isValidZernioSignatureAny(rawBody, signature, secretos);
+  }
   const channel = zernioTargetChannel(evt);
   if (!evt || !channel) return true;
   const found = await findZernioConnection(channel, evt.account);
@@ -92,6 +99,14 @@ export async function isAuthenticZernioDelivery(
  * con aviso: la instancia no lo tiene, y su superficie no existe (ADR-001).
  */
 export async function processZernioPayload(payload: unknown): Promise<void> {
+  const evt = payload as ZernioEvent | null;
+  if (evt && zernioPlatform(evt) === "whatsapp") {
+    const config = configuracionWhatsAppZernio();
+    if (config && (evt.account?.id ?? evt.account?.accountId) === config.cuenta) {
+      await ingerirWhatsAppZernio(evt, config.organizacion);
+    }
+    return;
+  }
   const channel = zernioTargetChannel(payload);
   if (!channel) return; // otra plataforma conectada a la misma llave: no es nuestra
 

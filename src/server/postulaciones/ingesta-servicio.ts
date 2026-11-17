@@ -10,12 +10,34 @@ import { validarAlcanceYCitas, type AlcanceIngesta, type DatosIngesta } from "./
 export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIngesta, archivo?: { bytes: Buffer; mime: string; nombre: string }) {
   const esCorreo = "buzon" in datos;
   validarAlcanceYCitas(datos, alcance);
+  const esMessenger = "canal" in datos && datos.canal === "messenger";
+  if (esMessenger) {
+    if (archivo) throw new ErrorPostulacion(422, "archivo_inesperado", "Se usa el PDF guardado en Messenger");
+    const { message, conversation, mediaAsset } = schema;
+    const [pdf] = await getDb().select({ id: mediaAsset.id, nombre: mediaAsset.fileName })
+      .from(message)
+      .innerJoin(conversation, eq(message.conversationId, conversation.id))
+      .innerJoin(mediaAsset, eq(message.mediaAssetId, mediaAsset.id))
+      .where(scoped(message.organizationId, alcance.org,
+        eq(message.id, datos.mensaje_id), eq(message.direction, "in"), eq(message.type, "document"),
+        scoped(conversation.organizationId, alcance.org, eq(conversation.id, datos.conversacion_id), eq(conversation.channel, "messenger")),
+        scoped(mediaAsset.organizationId, alcance.org, eq(mediaAsset.id, datos.media_id.slice("archivo.".length)),
+          eq(mediaAsset.mimeType, "application/pdf"), eq(mediaAsset.fetchStatus, "available"))))
+      .limit(1);
+    if (!pdf) throw new ErrorPostulacion(404, "pdf_no_disponible", "El chat no tiene ese PDF disponible");
+    archivo = {
+      bytes: await leerMedia(alcance.org, pdf.id),
+      mime: "application/pdf",
+      nombre: pdf.nombre ?? "CV de Messenger.pdf",
+    };
+  }
   const fallo = "fallo_procesamiento" in datos ? datos.fallo_procesamiento : undefined;
   const sinAdjunto = fallo === "falta_cv" || fallo === "varios_adjuntos";
   if (Boolean(archivo) === sinAdjunto) throw new ErrorPostulacion(422, "campos_invalidos", "El archivo debe corresponder al motivo de revisión");
   if (archivo) (esCorreo ? validarCvCorreo : validarPdf)(archivo.bytes, archivo.mime);
-  const origen = esCorreo ? "correo" : "zernio";
-  const cuenta = esCorreo ? datos.buzon.toLowerCase() : datos.cuenta_id;
+  const origen = esCorreo ? "correo" : esMessenger ? "messenger" : "zernio";
+  const cuenta = esCorreo ? datos.buzon.toLowerCase()
+    : "cuenta_id" in datos ? datos.cuenta_id : datos.conversacion_id;
   const clave = `ingesta:${origen}:${createHash("sha256").update(JSON.stringify([cuenta, datos.mensaje_id])).digest("hex")}`;
   const tabla = schema.postulacion;
   let nuevoArchivo: string | null = null;
@@ -91,14 +113,14 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
         analisis = { ...datos.analisis, rubrica_catalogo: referencia };
       }
       if (previa) {
-        const adjuntar = archivo && !previa.cvStorageId;
+        const adjuntar = previa.cvStorageId ? undefined : archivo;
         if (adjuntar) {
           nuevoArchivo = newId("mediaAsset");
-          await guardarMedia(alcance.org, nuevoArchivo, archivo.bytes, archivo.mime);
+          await guardarMedia(alcance.org, nuevoArchivo, adjuntar.bytes, adjuntar.mime);
         }
         await tx.update(tabla).set({
           vacante, analisis, etapa: vacantePendiente ? previa.etapa : "nueva", actualizadaEn: new Date(),
-          ...(adjuntar && { cvStorageId: nuevoArchivo, cvNombre: nombreCvSeguro(archivo.nombre, archivo.mime), cvBytes: archivo.bytes.length }),
+          ...(adjuntar && { cvStorageId: nuevoArchivo, cvNombre: nombreCvSeguro(adjuntar.nombre, adjuntar.mime), cvBytes: adjuntar.bytes.length }),
           version: sql`${tabla.version} + 1`,
         }).where(scoped(tabla.organizationId, alcance.org, eq(tabla.id, previa.id), eq(tabla.version, previa.version)));
         insercionTerminada = true;
@@ -113,7 +135,7 @@ export async function ingerirPostulacion(alcance: AlcanceIngesta, datos: DatosIn
       await tx.insert(tabla).values({ id, organizationId: alcance.org, nombre: datos.nombre,
         vacante,
         etapa: vacantePendiente ? "por_completar" : "nueva",
-        canal: esCorreo ? "correo" : "whatsapp", claveExterna: clave, analisis,
+        canal: esCorreo ? "correo" : esMessenger ? "messenger" : "whatsapp", claveExterna: clave, analisis,
         ...(archivo && { cvStorageId: storageId, cvNombre: nombreCvSeguro(archivo.nombre, archivo.mime), cvBytes: archivo.bytes.length }) });
       insercionTerminada = true;
       return { creada: true, id, url_ficha: `/postulaciones?id=${id}` };

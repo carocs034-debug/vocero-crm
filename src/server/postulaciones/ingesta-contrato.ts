@@ -15,7 +15,16 @@ const datosCorreoSchema = z.object({
   mensaje_id: z.string().trim().min(1).max(998),
   nombre: z.string().trim().min(2).max(120),
 });
+const datosMessengerSchema = datosMensajeSchema.omit({ cuenta_id: true }).extend({
+  canal: z.literal("messenger"),
+  media_id: z.string().regex(/^archivo\.ma_[\w-]{1,53}$/),
+});
 export const datosIngestaSchema = z.union([
+  datosMessengerSchema.extend({
+    vacante_indicada: z.literal(true),
+    rubrica_catalogo: referenciaRubrica,
+    texto_extraido: z.string().min(300).max(60000), analisis: analisisPostulacionSchema,
+  }).strict(),
   datosMensajeSchema.extend({
     vacante_indicada: z.literal(false),
   }).strict(),
@@ -47,11 +56,13 @@ export const datosIngestaSchema = z.union([
   }).strict(),
 ]);
 export type DatosIngesta = z.infer<typeof datosIngestaSchema>;
-export type AlcanceIngesta = { org: string; cuenta: string; conversacion: string; vacante: string; buzon?: string };
+export type AlcanceIngesta = { org: string; cuenta: string; conversacion: string; vacante: string; buzon?: string; conversacionMessenger?: string };
 export function validarAlcanceYCitas(datos: DatosIngesta, alcance: AlcanceIngesta) {
   const autorizado = "buzon" in datos
     ? datos.buzon.toLowerCase() === alcance.buzon?.toLowerCase()
-    : datos.cuenta_id === alcance.cuenta && datos.conversacion_id === alcance.conversacion;
+    : "canal" in datos
+      ? datos.conversacion_id === alcance.conversacionMessenger
+      : datos.cuenta_id === alcance.cuenta && datos.conversacion_id === alcance.conversacion;
   if (!autorizado) throw new ErrorPostulacion(403, "fuera_de_alcance", "Mensaje fuera del piloto autorizado");
   if (datos.vacante_indicada === false) return;
   const normalizar = (s: string) => s.normalize("NFC").replace(/\s+/g, " ").trim();
